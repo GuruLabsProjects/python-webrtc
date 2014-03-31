@@ -1,0 +1,3 @@
+[submodule "docs"]
+	path = docs
+	url = http://dev.oak-tree.us/courseware/pyweb.html5.wiki.git
