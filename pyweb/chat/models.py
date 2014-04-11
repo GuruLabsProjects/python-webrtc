@@ -1,13 +1,10 @@
 import uuid
 import datetime
 from django.utils import timezone
-from django.db import models, IntegrityError
+from django.db import models, IntegrityError, transaction
 from django.contrib.auth.models import User
-# from django.contrib.auth.models import UserManager
-from django.db import transaction
 
 class ChatUser(models.Model):
- 	#user = models.ForeignKey(User)
  	user = models.OneToOneField(User)
 
  	@staticmethod
@@ -25,7 +22,6 @@ class Message(models.Model):
 	timestamp = models.DateTimeField(auto_now_add=True, verbose_name='date submitted')
 	sender = models.ForeignKey(ChatUser)
 
-	# @transaction.atomic
 	def save(self, *args, **kwargs):
 		success = False
 		while success==False:
