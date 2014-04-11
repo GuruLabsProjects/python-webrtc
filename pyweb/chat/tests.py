@@ -61,15 +61,25 @@ class ConversationTests(TestCase):
 
 	def testAddRemoveMessages(self):
 		users = []
-		for x in range(0, 33):
-			users.append(ChatUser.createUser(username="test" + str(x)))
-			users[x].save()
 		msgs = []
 		for x in range(0, 99):
-			msgs.append(Message(sender=ChatUser.objects.get(username="test" + str(x/3)).pk, text="some text " + str(x)))
+			users.append(ChatUser.createUser(username="test" + str(x)))
+			users[x].save()
+			msgs.append(Message(sender=users[x], text="some text " + str(x)))
 			msgs[x].save()
-		convo = Conversation()
-		convo.add(*users)
-		convo.add(*msgs)
+		
 
+		convo = Conversation()
+		convo.save()
+		convo.participants.add(*users)
+		convo.messages.add(*msgs)
+		convo.save()
+
+		self.assertEqual(len(convo.messages.all()), 99)
+		self.assertEqual(len(convo.participants.all()), 99)
+		self.assertEqual(convo.messages.get(message_id=msgs[0].message_id).text, "some text 0")
+		self.assertEqual(convo.messages.get(message_id=msgs[98].message_id).text, "some text 98")
+		self.assertEqual(convo.messages.get(message_id=msgs[33].message_id).text, "some text 33")
+		self.assertEqual(convo.participants.get(pk=users[0].pk).user.username, "test0")
+		self.assertEqual(convo.messages.get(message_id=msgs[0].message_id).sender.user.username, "test0")
 

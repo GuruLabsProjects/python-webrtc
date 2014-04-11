@@ -1,13 +1,10 @@
 import uuid
 import datetime
 from django.utils import timezone
-from django.db import models
+from django.db import models, IntegrityError
 from django.contrib.auth.models import User
-from django.contrib.auth.models import UserManager
-
-
-# Create your models here.
-
+# from django.contrib.auth.models import UserManager
+from django.db import transaction
 
 class ChatUser(models.Model):
  	#user = models.ForeignKey(User)
@@ -23,25 +20,26 @@ class ChatUser(models.Model):
  			
 
 class Message(models.Model):
-	#make message_id alphanumeric unique identifier... index on it instead of primary key?
-	#collisions possible
-	def messageIdGenerator():
-		return uuid.uuid4().hex;
-
-	message_id = models.CharField(primary_key=True, max_length=36, unique=True, editable=False, default=messageIdGenerator())
+	message_id = models.CharField(primary_key=True, max_length=36, unique=True, editable=False, default=uuid.uuid4().hex)
 	text = models.CharField(editable=False, max_length=256)
 	timestamp = models.DateTimeField(auto_now_add=True, verbose_name='date submitted')
 	sender = models.ForeignKey(ChatUser)
 
+	# @transaction.atomic
 	def save(self, *args, **kwargs):
 		success = False
 		while success==False:
 			try:
-				super(Message, self).save(*args, **kwargs)
+				# see https://docs.djangoproject.com/en/dev/topics/db/transactions/
+				with transaction.atomic():
+					super(Message, self).save(*args, **kwargs)
 				success = True
-			except models.db.IntegrityError:
+			except IntegrityError as e:
+				self.message_id = uuid.uuid4().hex
 				success = False
-		super.save(self, args, kwargs)
+
+	def __str__(self):
+		return "(" + self.sender.user.username + " : " + self.text + ")"
 
 
 
