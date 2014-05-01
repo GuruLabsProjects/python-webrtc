@@ -5,7 +5,7 @@ from django.core import serializers
 from django.contrib.auth.decorators import login_required
 from django.views.generic import View
 from django.contrib.auth.models import User
-from chat.models import ChatUser, Message, Conversation
+from chat.models import ChatUserProfile, Message, Conversation
 
 class LoginRequiredMixin(object):
     @classmethod
@@ -16,13 +16,13 @@ class LoginRequiredMixin(object):
 class TestCBVUser(View):
 
 	def get(self, request, *args, **kwargs):
-		cuser = ChatUser.objects.get(pk=self.kwargs['pk'])
+		cuser = ChatUserProfile.objects.get(pk=self.kwargs['pk'])
 		user = User.objects.get(pk=cuser.pk)
 		# cuser.user = serializers.serialize('json', [User.objects.get(pk=cuser.pk), ])
 		data = serializers.serialize('json', [cuser, ])
 		print user.username
 		return HttpResponse(data, content_type='application/json')
-		# self.object = self.get_object(queryset=ChatUser.objects.all())
+		# self.object = self.get_object(queryset=ChatUserProfile.objects.all())
 		# return super(TestCBVUser, self).get(request, *args, **kwargs)
 
 class Old:
@@ -38,13 +38,13 @@ class Old:
 	# POST - createUser
 	@staticmethod
 	def user(request):
-		# data = ChatUser()
+		# data = ChatUserProfile()
 		if request.method == 'GET':
 			username = str(uuid.uuid4().hex)
 			#we need to secure this, salt it or w/e
 			password = 'testPassword'
 			email = 'testEmail@email.com'
-			cuser = ChatUser.createUser(username=username, password=password, email=email)
+			cuser = ChatUserProfile.createUser(username=username, password=password, email=email)
 			cuser.save()
 			data = serializers.serialize('json', [cuser, ])
 			# data = serializers.serialize('json', cuser)

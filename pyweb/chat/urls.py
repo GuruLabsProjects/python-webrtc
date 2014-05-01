@@ -13,5 +13,5 @@ urlpatterns = patterns('',
     url(r'^message/', Old.message, name='message'),
 	url(r'^user/', Old.user, name='user'),
 	url(r'^conversation/', Old.conversation, name='conversation'),
-	url(r'^test/(?P<pk>\d+)/$', TestCBVUser.as_view(), name='test')
+	url(r'^test/(?P<pk>\d+)/$', TestCBVUser.as_view(), name='test') 
 )
