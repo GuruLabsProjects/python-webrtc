@@ -1,7 +1,7 @@
 import uuid
 from django.shortcuts import render
 from django.http import HttpResponse
-from chat.models import ChatUser, Message, Conversation
+from chat.models import ChatUserProfile, Message, Conversation
 from django.core import serializers
 
 unimplementedStr = "This has yet to be implemented..."
