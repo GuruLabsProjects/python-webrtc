@@ -18,7 +18,7 @@ class ChatUserProfile(models.Model):
  			@returns user profile object
  		'''
  		cuser = User.objects.create_user(username=username, email=email, password=password, **kwargs)
- 		return ChatUser(user=cuser)
+ 		return ChatUserProfile(user=cuser)
 
 	def __str__(self):
 		return self.user.username
@@ -29,7 +29,7 @@ class Message(models.Model):
 		unique=True, editable=False, default=uuid.uuid4().hex)
 	text = models.CharField(editable=False, max_length=256)
 	timestamp = models.DateTimeField(auto_now_add=True, verbose_name='date submitted')
-	sender = models.ForeignKey(ChatUser)
+	sender = models.ForeignKey(ChatUserProfile)
 
 	# def save(self, *args, **kwargs):
 	#	success = False
@@ -49,5 +49,5 @@ class Message(models.Model):
 
 
 class Conversation(models.Model):
-	participants = models.ManyToManyField(ChatUser)
+	participants = models.ManyToManyField(ChatUserProfile)
 	messages = models.ManyToManyField(Message)
