@@ -9,16 +9,16 @@ class ChatUserProfile(models.Model):
 	'''
  	user = models.OneToOneField(User)
 
- 	@staticmethod
- 	def createUser(username, email=None, password=None, **kwargs):
- 		''' Convenience method to create a user and profile simultaneously
- 			@input username: Username, must be unique
- 			@input email (default=None): Email for user
- 			@input password (default=None): User password
- 			@returns user profile object
- 		'''
- 		cuser = User.objects.create_user(username=username, email=email, password=password, **kwargs)
- 		return ChatUserProfile(user=cuser)
+ 	# @staticmethod
+ 	# def createUser(username, email=None, password=None, **kwargs):
+ 	# 	''' Convenience method to create a user and profile simultaneously
+ 	# 		@input username: Username, must be unique
+ 	# 		@input email (default=None): Email for user
+ 	# 		@input password (default=None): User password
+ 	# 		@returns user profile object
+ 	# 	'''
+ 	# 	cuser = User.objects.create_user(username=username, email=email, password=password, **kwargs)
+ 	# 	return ChatUserProfile(user=cuser)
 
 	def __str__(self):
 		return self.user.username
