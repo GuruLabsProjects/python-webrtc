@@ -1,4 +1,5 @@
 import uuid, json
+import logging
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.core import serializers
@@ -6,7 +7,9 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic import View
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
-from chat.models import ChatUserProfile, Message, Conversation
+from .models import ChatUserProfile, Message, Conversation
+
+logger = logging.getLogger(__name__)
 
 class UserRestView(View):
 	def get(self, request, *args, **kwargs):
