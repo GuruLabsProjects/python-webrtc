@@ -13,7 +13,7 @@ class ChatUserProfileTests(TestCase):
 	def testCreateUser(self):
 		''' Tests the creation of a new chat user
 		'''
-		user = ChatUserProfile.createUser(username="aTestUsername")
+		user = ChatUserProfile.createuser(username="aTestUsername")
 		user.save()
 		# Do some basic tests to make sure it's saved into the database properly
 		self.assertEqual("aTestUsername", user.user.username)
@@ -30,7 +30,7 @@ class MessageTests(TestCase):
 			message_id of two messages to the same thing, save them both, and one of them
 			should be overwritten to a new pseduo random alphanumeric value.
 		'''
-		user = ChatUserProfile.createUser(username="Cam")
+		user = ChatUserProfile.createuser(username="Cam")
 		user.save()
 		convo = Conversation()
 		convo.save()
@@ -53,7 +53,7 @@ class ConversationTests(TestCase):
 
 	# Test adding/removing of participants
 	def testAddRemoveParticipants(self):
-		user = ChatUserProfile.createUser(username="Cam")
+		user = ChatUserProfile.createuser(username="Cam")
 		user.save()
 		convo = Conversation()
 		convo.save()
@@ -61,7 +61,7 @@ class ConversationTests(TestCase):
 		users = []
 		convo.save()
 		for x in range(0, 29):
-			users.append(ChatUserProfile.createUser(username="test" + str(x)))
+			users.append(ChatUserProfile.createuser(username="test" + str(x)))
 			users[x].save()
 		convo.participants.add(*users)
 		convo.save()
@@ -80,7 +80,7 @@ class ConversationTests(TestCase):
 		users = []
 		msgs = []
 		for x in range(0, 99):
-			users.append(ChatUserProfile.createUser(username="test" + str(x)))
+			users.append(ChatUserProfile.createuser(username="test" + str(x)))
 			users[x].save()
 			msgs.append(Message(sender=users[x], text="some text " + str(x)))
 			msgs[x].save()

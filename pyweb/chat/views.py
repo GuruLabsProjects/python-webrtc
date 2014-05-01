@@ -35,7 +35,7 @@ class Old:
 
 	# GET - return user object if valid login data
 	#	  - include conversation id's
-	# POST - createUser
+	# POST - createuser
 	@staticmethod
 	def user(request):
 		# data = ChatUserProfile()
@@ -44,7 +44,7 @@ class Old:
 			#we need to secure this, salt it or w/e
 			password = 'testPassword'
 			email = 'testEmail@email.com'
-			cuser = ChatUserProfile.createUser(username=username, password=password, email=email)
+			cuser = ChatUserProfile.createuser(username=username, password=password, email=email)
 			cuser.save()
 			data = serializers.serialize('json', [cuser, ])
 			# data = serializers.serialize('json', cuser)
