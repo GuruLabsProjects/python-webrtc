@@ -14,11 +14,13 @@ logger = logging.getLogger(__name__)
 class UserRestView(View):
 	def get(self, request, *args, **kwargs):
 		user = User.objects.get(pk=kwargs['pk'])
+		
 		#when I try to use json.dumps(user) it gives an error saying its not JSON
 		#	serializable
 		data = serializers.serialize('json', [user, ])
-		return HttpResponse(json.dumps(model_to_dict(user)), content_type='application/json')
-		# return HttpResponse(data, content_type='application/json')
+		logger.info(data)
+		#return HttpResponse(json.dumps(model_to_dict(user)), content_type='application/json')
+		return HttpResponse(data, content_type='application/json')
 
 	def put(self, request, *args, **kwargs):
 		udata = serializers.deserialize(request.body)

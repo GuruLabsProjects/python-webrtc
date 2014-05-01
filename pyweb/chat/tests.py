@@ -1,23 +1,30 @@
-import uuid
-import datetime
-import posixpath
+import uuid, datetime, posixpath, logging
 from django.utils import timezone
 from django.db import models, IntegrityError
 from django.test import TestCase
 from django.contrib.auth.models import User, UserManager
-from django.test.client import Client
+from django.test.client import RequestFactory
 from chat.models import ChatUserProfile, Message, Conversation
 
+logger = logging.getLogger(__name__)
 
 class UserViewTests(TestCase):
+	self.factory = RequestFactory()
 	
 	def testGet(self):
 		user = User.objects.create_user(username="guru")
 		user.save()
-		c = Client()
 		url_components = ['/chat/usr', str(user.pk)]
-		response = posixpath.join(*url_components)
-		print dir(response)
+		response = self.factory.get(url_components)
+
+	
+		# response = posixpath.join(*url_components)
+		logger.info(str(dir(response)))
+
+
+
+
+
 
 	username = 'testuser'
 

@@ -2,14 +2,8 @@ import uuid
 import datetime
 from django.utils import timezone
 from django.db import models
-from django.forms import ModelForm
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
-
-class ChatUserProfileForm(ModelForm):
-	class Meta:
-		model = ChatUserProfile
-		fields = ['user']
 
 class ChatUserProfile(models.Model):
 	''' User profile class for service users. Provides supplementary data, avatar
@@ -30,12 +24,7 @@ class ChatUserProfile(models.Model):
  	# 	return ChatUserProfile(user=cuser)
 
 	def __str__(self):
-		return self.user.username
-
-class MessageForm(ModelForm):
-	class Meta:
-		model = Message
-		fields = ['message_id', 'text', 'timestamp', 'sender']			
+		return self.user.username		
 
 class Message(models.Model):
 	''' This represents a single message sent during chat.  It has a unique alpha numeric
@@ -47,17 +36,12 @@ class Message(models.Model):
 		unique=True, editable=False, default=uuid.uuid4().hex)
 	text = models.CharField(editable=False, max_length=256)
 	# datetime.datetime.now doesn't work... something to do with time zone?
-	timestamp = models.DateTimeField(default=timezone.now, verbose_name='date submitted')
+	timestamp = models.DateTimeField(default=datetime.datetime.utcnow, verbose_name='date submitted')
 	sender = models.ForeignKey(User)
 
 	def __str__(self):
 		# return ''.join([self.sender.user.username,self.text])
 		return ':'.join([str(s) for s in (self.sender.username, self.text) if s is not None])
-
-class ConversationForm(ModelForm):
-	class Meta:
-		model = Conversation
-		fields = ['participants', 'messages']	
 
 class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
