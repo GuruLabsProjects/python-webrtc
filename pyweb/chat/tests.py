@@ -9,17 +9,24 @@ from chat.models import ChatUserProfile, Message, Conversation
 # Test cases for ChatUserProfile model
 class ChatUserProfileTests(TestCase):
 
+	username = 'testuser'
+
 	# Test ChatUserProfile creation
 	def testCreateUser(self):
-		''' Tests the creation of a new chat user
+		''' Tests the creation of a chat user and user profile
 		'''
-		user = ChatUserProfile.createuser(username="aTestUsername")
+		# Create test user
+		user = User.objects.create(username=self.username)
 		user.save()
+		# Create user profile
+		userp = ChatUserProfile(user=user)
+		userp.save()
+
 		# Do some basic tests to make sure it's saved into the database properly
-		self.assertEqual("aTestUsername", user.user.username)
-		self.assertEqual("aTestUsername", ChatUserProfile.objects.get(pk=user.pk).user.username)
-		self.assertEqual(user.pk, ChatUserProfile.objects.get(user=user).pk)
-		self.assertEqual(user.user.pk, ChatUserProfile.objects.get(user=user).user.pk)
+		self.assertEqual(self.username, user.username)
+		self.assertEqual(user.username, ChatUserProfile.objects.get(pk=user.pk).user.username)
+		# self.assertEqual(user.pk, ChatUserProfile.objects.get(user=user).pk)
+		# self.assertEqual(user.user.pk, ChatUserProfile.objects.get(user=user).user.pk)
 		self.assertEqual(len(ChatUserProfile.objects.all()), 1)
 
 
