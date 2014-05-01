@@ -29,7 +29,7 @@ class Message(models.Model):
 		unique=True, editable=False, default=uuid.uuid4().hex)
 	text = models.CharField(editable=False, max_length=256)
 	timestamp = models.DateTimeField(auto_now_add=True, verbose_name='date submitted')
-	sender = models.ForeignKey(ChatUserProfile)
+	sender = models.ForeignKey(User)
 
 	# def save(self, *args, **kwargs):
 	#	success = False
@@ -44,10 +44,10 @@ class Message(models.Model):
 	#			success = False
 
 	def __str__(self):
-		return "(" + self.sender.user.username + " : " + self.text + ")"
+		return ':'.join([str(s) for s in (self.sender.username, self.text) if s is not None])
 
 
 
 class Conversation(models.Model):
-	participants = models.ManyToManyField(ChatUserProfile)
+	participants = models.ManyToManyField(User)
 	messages = models.ManyToManyField(Message)
