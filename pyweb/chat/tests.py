@@ -1,17 +1,17 @@
-from django.test import TestCase
-from chat.models import ChatUser, Message, Conversation
 import uuid
 import datetime
 from django.utils import timezone
 from django.db import models
-from django.contrib.auth.models import User
-from django.contrib.auth.models import UserManager
+from django.test import TestCase
+from django.contrib.auth.models import User, UserManager
+from chat.models import ChatUser, Message, Conversation
 
 # Test cases for ChatUser model
 class ChatUserTests(TestCase):
 
 	# Test ChatUser creation
 	def testCreateUser(self):
+		'''Tests the creation of a new chat user'''
 		user = ChatUser.createUser(username="aTestUsername")
 		user.save()
 		# Do some basic tests to make sure it's saved into the database properly
@@ -24,11 +24,24 @@ class ChatUserTests(TestCase):
 
 # Test cases for Message model
 class MessageTests(TestCase):
-	pass
+	def testUniqueness(self):
+		'''Tests to ensure the save() method of Message model works properly.  Set message_id of two
+			messages to the same thing, save them both, and one of them should be overwritten to a new
+			pseduo random alphanumeric value.'''
+		user = ChatUser.createUser(username="Cam")
+		user.save()
+		convo = Conversation()
+		convo.save()
+		msg = Message(sender=user, text="some text msg1", message_id='abc123')
+		msg1 = Message(sender=user, text="some text msg2", message_id='abc123')
+		msg.save()
+		msg1.save()
+		self.assertNotEqual(msg.message_id, msg1.message_id)
+		print msg.message_id,' vs ',msg1.message_id
 
 # Test cases for Conversation model
 class ConversationTests(TestCase):
-
+	'''basic testing of conversation modal'''
 	# Test Conversation creation
 	def testCreateConversation(self):
 		convo = Conversation()
