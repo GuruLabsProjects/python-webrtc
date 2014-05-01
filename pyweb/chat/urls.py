@@ -1,17 +1,12 @@
 from django.conf.urls import patterns, url
 
-from chat.views import Old
-from chat.views import TestCBVUser
+from chat.views import UserCreateView, UserRestView, MessageCreateView, MessageRestView, ConversationCreateView, ConversationRestView
 
-#TODO: clean this up, remove Old, make everything CBV.
 urlpatterns = patterns('',
-	url(r'^$', Old.index, name='index'),
-    # url(r'^$', views.IndexView.as_view(), name='index'),
-    # url(r'^(?P<pk>\d+)/$', views.DetailView.as_view(), name='detail'),
-    # url(r'^(?P<pk>\d+)/results/$', views.ResultsView.as_view(), name='results'),
-    # url(r'^(?P<question_id>\d+)/vote/$', views.vote, name='vote'),
-    url(r'^message/', Old.message, name='message'),
-	url(r'^user/', Old.user, name='user'),
-	url(r'^conversation/', Old.conversation, name='conversation'),
-	url(r'^test/(?P<pk>\d+)/$', TestCBVUser.as_view(), name='test') 
+    url(r'^msg/$', MessageCreateView.as_view()),
+	url(r'^msg/(?P<pk>\d+)/$', MessageRestView.as_view()),
+    url(r'^conv/$', ConversationCreateView.as_view()),
+	url(r'^conv/(?P<pk>\d+)/$', ConversationRestView.as_view()),
+    url(r'^usr/$', UserCreateView.as_view()),
+	url(r'^usr/(?P<pk>\d+)/$', UserRestView.as_view())
 )

@@ -1,12 +1,19 @@
 import uuid
 import datetime
 from django.utils import timezone
-from django.db import models, IntegrityError, transaction
+from django.db import models
+from django.forms import ModelForm
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 
+class ChatUserProfileForm(ModelForm):
+	class Meta:
+		model = ChatUserProfile
+		fields = ['user']
+
 class ChatUserProfile(models.Model):
-	''' User profile class for service users. Provides supplementary data, avatar settings, etc.
+	''' User profile class for service users. Provides supplementary data, avatar
+		settings, etc.
 	'''
  	user = models.OneToOneField(User)
 
@@ -24,23 +31,33 @@ class ChatUserProfile(models.Model):
 
 	def __str__(self):
 		return self.user.username
- 			
+
+class MessageForm(ModelForm):
+	class Meta:
+		model = Message
+		fields = ['message_id', 'text', 'timestamp', 'sender']			
 
 class Message(models.Model):
 	''' This represents a single message sent during chat.  It has a unique alpha numeric
-		pseduorandom message_id, the text of the actual message, the timestamp of when the
+		pseudorandom message_id, the text of the actual message, the timestamp of when the
 		message was sent, and a foreign key linking it to the sender
+		@raise IntegrityError if the pseudorandom message_id is not unique
 	'''
 	message_id = models.CharField(primary_key=True, max_length=36, 
 		unique=True, editable=False, default=uuid.uuid4().hex)
 	text = models.CharField(editable=False, max_length=256)
-	timestamp = models.DateTimeField(auto_now_add=True, verbose_name='date submitted')
+	# datetime.datetime.now doesn't work... something to do with time zone?
+	timestamp = models.DateTimeField(default=timezone.now, verbose_name='date submitted')
 	sender = models.ForeignKey(User)
 
 	def __str__(self):
 		# return ''.join([self.sender.user.username,self.text])
 		return ':'.join([str(s) for s in (self.sender.username, self.text) if s is not None])
 
+class ConversationForm(ModelForm):
+	class Meta:
+		model = Conversation
+		fields = ['participants', 'messages']	
 
 class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
