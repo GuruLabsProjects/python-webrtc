@@ -12,6 +12,13 @@ from .views import (UserRestView, UserCreateView, MessageRestView, MessageCreate
 
 logger = logging.getLogger(__name__)
 
+API_SUCCESS = 'success'
+API_FAIL = 'fail'
+API_ERROR = 'error'
+API_OBJECT_CREATE = 'object-create'
+API_OBJECT_UPDATE = 'object-update'
+API_OBJECT_DELETE = 'object-delete'
+
 class UserViewTests(TestCase):
 	factory = RequestFactory()
 	username = 'guru'

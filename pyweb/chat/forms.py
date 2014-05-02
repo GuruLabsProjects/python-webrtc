@@ -11,7 +11,7 @@ from .models import ChatUserProfile, Conversation, Message
 class UserForm(ModelForm):
 	class Meta:
 		model = User
-		fields = ('id', 'email', 'password', )
+		fields = ('id', 'username', 'email', 'password', )
 		#'username'
 
 class MessageForm(ModelForm):
