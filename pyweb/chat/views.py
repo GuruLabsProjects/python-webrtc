@@ -1,9 +1,13 @@
 import uuid, json, logging, datetime
-from django.shortcuts import render
+
+from django.shortcuts import render, render_to_response
+
 from django.http import HttpResponse
-# from django.core import serializers
 from django.contrib.auth.decorators import login_required
+
 from django.views.generic import View
+from django.template import Context, loader, RequestContext
+
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from .models import ChatUserProfile, Message, Conversation
@@ -114,3 +118,9 @@ class MessageCreateView(View):
 
 	def post(self, request, *args, **kwargs):
 		return HttpResponseBadRequest()		
+
+
+def application_index(request):
+	return render_to_response('index.html', {
+			'title' : 'Guru Labs Chat Demo Application',
+		}, context_instance=RequestContext(request))

@@ -82,9 +82,15 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
+STATICFILES_DIRS = (
 	os.path.join(PROJECT_DIR, 'static'),
-]
+)
+
+
+# Template Directories
+TEMPLATE_DIRS = (
+	os.path.join(PROJECT_DIR, 'templates'),
+)
 
 # Logging Configuration
 if DEBUG:
@@ -110,7 +116,7 @@ if DEBUG:
 		'loggers' : {
 			'django.request' : {
 				'handlers' : False,
-				'level' : 'INFO',
+				'level' : 'DEBUG',
 			},
 		},
 	}
