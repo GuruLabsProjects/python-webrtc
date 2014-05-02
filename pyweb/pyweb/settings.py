@@ -75,13 +75,48 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
+STATICFILES_DIRS = (
 	os.path.join(PROJECT_DIR, 'static'),
-]
+)
+
+
+# Template Directories
+TEMPLATE_DIRS = (
+	os.path.join(PROJECT_DIR, 'templates'),
+)
+
+# Logging Configuration
+if DEBUG:
+	LOGGING = {
+		'version' : 1,
+		'disable_existing_loggers' : False,
+		'formatters' : {
+			'simple' : {
+				'format' : '%(asctime)s %(levelname)s %(message)s',
+			}
+		},
+		'handlers' : {
+			'console' : {
+				'level' : 'DEBUG',
+				'class' : 'logging.StreamHandler',
+				'formatter' : 'simple',
+			}
+		},
+		'root' : {
+			'level' : 'INFO',
+			'handlers' : ['console',],
+		},
+		'loggers' : {
+			'django.request' : {
+				'handlers' : False,
+				'level' : 'DEBUG',
+			},
+		},
+	}

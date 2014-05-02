@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+
+<head>{% block pagehead %}{% include 'base.head.html' %}{% endblock %}</head>
+
+<body>
+<!-- Page Header -->
+<header id="chat-header" class="row">{% block header %}{% endblock %}</header>
+<!-- Page Top Navigation -->
+<nav id="chat-topnav" class="row">{% block navigation %}{% endblock %}</nav>
+<!-- Page Content -->
+<section id="chat-pagecontent" class="row">
+{% block content %}{% endblock %}
+</section>
+</body>
+
+</html>

@@ -1,85 +1,155 @@
-from django.test import TestCase
-from chat.models import ChatUser, Message, Conversation
-import uuid
-import datetime
+import uuid, datetime, posixpath, logging
+
 from django.utils import timezone
-from django.db import models
-from django.contrib.auth.models import User
-from django.contrib.auth.models import UserManager
+from django.db import models, IntegrityError
 
-# Test cases for ChatUser model
-class ChatUserTests(TestCase):
+from django.test import TestCase, Client
+from django.test.client import RequestFactory
+from django.core.urlresolvers import reverse
 
-	# Test ChatUser creation
-	def testCreateUser(self):
-		user = ChatUser.createUser(username="aTestUsername")
+from django.contrib.auth.models import User, UserManager
+
+from django.test.client import RequestFactory
+
+from .models import ChatUserProfile, Message, Conversation
+
+logger = logging.getLogger(__name__)
+
+CORE_ASSETLIST_JS = ('jquery', 'underscore', 'backbone', 'modernizr', 'foundation')
+CORE_ASSETLIST_CSS = ('normalize', 'foundation')
+
+
+class UserViewTests(TestCase):
+
+	username = 'testuser'
+
+	def __init__(self, *args, **kwargs):
+		self.factory = RequestFactory()
+		super(UserViewTests, self).__init__(*args, **kwargs)
+
+	def testIndexPage(self):
+		'''	Verify that the application is able to retrieve the index page.
+		'''
+		r = self.client.get(reverse('chat:appindex'))
+		self.assertEqual(200, r.status_code)
+		# Check page title
+		self.assertIn('Guru Labs Chat Demo Application', r.content)
+		# Verify that all core assets are available for use
+		for assetlist in (CORE_ASSETLIST_JS, CORE_ASSETLIST_CSS):
+			for assetname in assetlist: self.assertIn(assetname, r.content)
+
+	
+	# def testGet(self):
+	# 	user = User.objects.create_user(username="guru")
+	# 	user.save()
+	# 	url_components = ['/chat/usr', str(user.pk)]
+	# 	response = self.factory.get(url_components)
+	
+	# 	# response = posixpath.join(*url_components)
+	# 	logger.info(str(dir(response)))
+
+	# Test ChatUserProfile creation
+	def testCreateUserProfile(self):
+		''' Tests the creation of a chat user and user profile
+		'''
+		# Create test user
+		user = User.objects.create(username=self.username)
 		user.save()
+		# Create user profile
+		userp = ChatUserProfile(user=user)
+		userp.save()
+
 		# Do some basic tests to make sure it's saved into the database properly
-		self.assertEqual("aTestUsername", user.user.username)
-		self.assertEqual("aTestUsername", ChatUser.objects.get(pk=user.pk).user.username)
-		self.assertEqual(user.pk, ChatUser.objects.get(user=user).pk)
-		self.assertEqual(user.user.pk, ChatUser.objects.get(user=user).user.pk)
-		self.assertEqual(len(ChatUser.objects.all()), 1)
+		self.assertEqual(self.username, user.username)
+		self.assertEqual(user.username, ChatUserProfile.objects.get(pk=user.pk).user.username)
+		# self.assertEqual(user.pk, ChatUserProfile.objects.get(user=user).pk)
+		# self.assertEqual(user.user.pk, ChatUserProfile.objects.get(user=user).user.pk)
+		self.assertEqual(len(ChatUserProfile.objects.all()), 1)
 
+# # Test cases for Message model
+# class MessageTests(TestCase):
+# 	def testUniqueness(self):
+# 		''' Test to ensure an IntegrityError is raised when message_id is NOT unique
+# 		'''
+# 		user = User.objects.create_user(username="Cam")
+# 		user.save()
+# 		convo = Conversation()
+# 		convo.save()
+# 		msg = Message(sender=user, text="some text msg1", message_id='abc123')
+# 		msg1 = Message(sender=user, text="some text msg2", message_id='abc123')
+# 		msg.save()
+# 		print ' '.join([str(msg.message_id), str(msg1.message_id)])
+# 		with self.assertRaises(IntegrityError):
+# 			msg1.save()
+# 		# msg1.save()
 
-# Test cases for Message model
-class MessageTests(TestCase):
-	pass
+# ##########all tests below here are just for Cam's learning for now.  They don't test any
+# #	real functionality of anything other than django itself.
 
-# Test cases for Conversation model
-class ConversationTests(TestCase):
+# # Test cases for Conversation model
+# class ConversationTests(TestCase):
+# 	''' basic testing of conversation modal
+# 	'''
+# 	# Test Conversation creation
+# 	def testCreateConversation(self):
+# 		convo = Conversation()
+# 		convo.save()
+# 		self.assertEquals(len(Conversation.objects.all()), 1)
 
-	# Test Conversation creation
-	def testCreateConversation(self):
-		convo = Conversation()
-		convo.save()
-		self.assertEquals(len(Conversation.objects.all()), 1)
+# 	# Test adding/removing of participants
+# 	def testAddRemoveParticipants(self):
+# 		user = User.objects.create_user(username="Cam")
+# 		user.save()
+# 		convo = Conversation()
+# 		convo.save()
+# 		convo.participants.add(user)
+# 		users = []
+# 		convo.save()
+# 		for x in range(0, 29):
+# 			users.append(User.objects.create_user(username="test" + str(x)))
+# 			users[x].save()
+# 		convo.participants.add(*users)
+# 		convo.save()
+# 		self.assertEqual(len(convo.participants.all()), len(Conversation.objects.get(
+# 			pk=convo.pk).participants.all()))
 
-	# Test adding/removing of participants
-	def testAddRemoveParticipants(self):
-		user = ChatUser.createUser(username="Cam")
-		user.save()
-		convo = Conversation()
-		convo.save()
-		convo.participants.add(user)
-		users = []
-		convo.save()
-		for x in range(0, 29):
-			users.append(ChatUser.createUser(username="test" + str(x)))
-			users[x].save()
-		convo.participants.add(*users)
-		convo.save()
-		self.assertEqual(len(convo.participants.all()), len(Conversation.objects.get(pk=convo.pk).participants.all()))
+# 		before = len(convo.participants.all())
+# 		convo.participants.remove(users[0])
+# 		convo.save()
+# 		self.assertEqual(before-1, len(convo.participants.all()))
+# 		convo.participants.remove(*users[1:])
+# 		self.assertEqual(1, len(convo.participants.all()))
+# 		self.assertEqual("Cam", convo.participants.all()[0].username)
 
-		before = len(convo.participants.all())
-		convo.participants.remove(users[0])
-		convo.save()
-		self.assertEqual(before-1, len(convo.participants.all()))
-		convo.participants.remove(*users[1:])
-		self.assertEqual(1, len(convo.participants.all()))
-		self.assertEqual("Cam", convo.participants.all()[0].user.username)
-
-	def testAddRemoveMessages(self):
-		users = []
-		msgs = []
-		for x in range(0, 99):
-			users.append(ChatUser.createUser(username="test" + str(x)))
-			users[x].save()
-			msgs.append(Message(sender=users[x], text="some text " + str(x)))
-			msgs[x].save()
+# 	def testAddRemoveMessages(self):
+# 		users = []
+# 		msgs = []
+# 		for x in range(0, 99):
+# 			users.append(User.objects.create_user(username="test" + str(x)))
+# 			users[x].save()
+# 			msgs.append(Message(sender=users[x], text="some text " + str(x)))
+# 			msgs[x].save()
 		
+# 		self.assertEqual(len(msgs), 99)
 
-		convo = Conversation()
-		convo.save()
-		convo.participants.add(*users)
-		convo.messages.add(*msgs)
-		convo.save()
+# 		convo = Conversation()
+# 		convo.save()
+# 		convo.participants.add(*users)
+# 		convo.messages.add(*msgs)
+# 		convo.save()
 
-		self.assertEqual(len(convo.messages.all()), 99)
-		self.assertEqual(len(convo.participants.all()), 99)
-		self.assertEqual(convo.messages.get(message_id=msgs[0].message_id).text, "some text 0")
-		self.assertEqual(convo.messages.get(message_id=msgs[98].message_id).text, "some text 98")
-		self.assertEqual(convo.messages.get(message_id=msgs[33].message_id).text, "some text 33")
-		self.assertEqual(convo.participants.get(pk=users[0].pk).user.username, "test0")
-		self.assertEqual(convo.messages.get(message_id=msgs[0].message_id).sender.user.username, "test0")
+# 		print 'HERE: '
+# 		print convo.messages.all()
+
+# 		self.assertEqual(len(convo.messages.all()), 99)
+# 		self.assertEqual(len(convo.participants.all()), 99)
+# 		self.assertEqual(convo.messages.get(message_id=msgs[0].message_id).text,
+# 			"some text 0")
+# 		self.assertEqual(convo.messages.get(message_id=msgs[98].message_id).text,
+# 			"some text 98")
+# 		self.assertEqual(convo.messages.get(message_id=msgs[33].message_id).text,
+# 			"some text 33")
+# 		self.assertEqual(convo.participants.get(pk=users[0].pk).username, "test0")
+# 		self.assertEqual(convo.messages.get(message_id=msgs[0].message_id).
+# 			sender.username, "test0")
 
