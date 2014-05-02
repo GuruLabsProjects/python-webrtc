@@ -11,8 +11,8 @@ api_urlpatterns = patterns('',
     url(r'^conv/$', ConversationCreateView.as_view(), name='conversation-create'),
 	url(r'^conv/(?P<pk>\d+)/$', ConversationRestView.as_view(), name='conversation-rest'),
 	# Profile REST URLs
-    url(r'^usr/$', UserCreateView.as_view(), name='profile-create'),
-	url(r'^usr/(?P<pk>\d+)/$', UserRestView.as_view(), name='profile-rest')
+    url(r'^usr/$', UserCreateView.as_view(), name='user-create'),
+	url(r'^usr/(?P<pk>\d+)/$', UserRestView.as_view(), name='user-rest')
 )
 
 urlpatterns = patterns('chat.views',

@@ -32,7 +32,6 @@ username = 'testuser'
 class DatabaseTests(TestCase):
 
 	def __init__(self, *args, **kwargs):
-		self.user = None
 		super(DatabaseTests, self).__init__(*args, **kwargs)
 
 	def testCreateUserProfile(self):
@@ -75,13 +74,8 @@ class UserViewTests(TestCase):
 		self.user.save()
 		self.view = UserRestView()
 
-	def tearDown(self):
-		self.user.delete()
-		self.user.save()
-
 	def testGet(self):
-		url_components = ['/chat/usr', str(self.user.pk)]
-		dummyGet = self.factory.get(''.join(['/chat/usr/', str(self.user.pk)]))
+		dummyGet = self.factory.get(reverse('chat:api:user-rest', args=str(self.user.pk)))
 		response = self.view.get(dummyGet,[], pk=str(self.user.pk))
 		logger.log(2, response.content)
 		response_user = json.loads(response.content)
@@ -94,7 +88,7 @@ class UserViewTests(TestCase):
 		userDict['email'] = 'guru@gurulabs.com'
 		jsonData = json.dumps(userDict, default=dthandler)
 
-		dummyPut = self.factory.put(''.join(['/chat/usr/',str(self.user.pk)]), jsonData)
+		dummyPut = self.factory.put(reverse('chat:api:user-rest', args=str(self.user.pk)), jsonData)
 		response = self.view.put(dummyPut, content_type='application/json', data=jsonData,
 			pk=str(self.user.pk))
 

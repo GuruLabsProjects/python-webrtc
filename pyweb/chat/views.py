@@ -11,7 +11,7 @@ from django.template import Context, loader, RequestContext
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from .models import ChatUserProfile, Message, Conversation
-from .forms import UserForm, MessageForm, ConversationForm
+from .forms import UserForm, ChatUserProfileForm, MessageForm, ConversationForm
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,8 @@ def dateTimeHandler(obj):
 
 class UserRestView(View):
 	def get(self, request, *args, **kwargs):
-		user = User.objects.get(pk=kwargs['pk'])
-		return HttpResponse(json.dumps(model_to_dict(user), default=dateTimeHandler),
+		userProfile = User.objects.get(pk=kwargs['pk'])
+		return HttpResponse(json.dumps(model_to_dict(userProfile), default=dateTimeHandler),
 			content_type='application/json')
 
 	def put(self, request, *args, **kwargs):
