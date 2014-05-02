@@ -1,35 +1,55 @@
 import uuid, datetime, posixpath, logging
+
 from django.utils import timezone
 from django.db import models, IntegrityError
-from django.test import TestCase
-from django.contrib.auth.models import User, UserManager
+
+from django.test import TestCase, Client
 from django.test.client import RequestFactory
-from chat.models import ChatUserProfile, Message, Conversation
+from django.core.urlresolvers import reverse
+
+from django.contrib.auth.models import User, UserManager
+
+from django.test.client import RequestFactory
+
+from .models import ChatUserProfile, Message, Conversation
 
 logger = logging.getLogger(__name__)
 
+CORE_ASSETLIST_JS = ('jquery', 'underscore', 'backbone', 'modernizr', 'foundation')
+CORE_ASSETLIST_CSS = ('normalize', 'foundation')
+
+
 class UserViewTests(TestCase):
-	self.factory = RequestFactory()
-	
-	def testGet(self):
-		user = User.objects.create_user(username="guru")
-		user.save()
-		url_components = ['/chat/usr', str(user.pk)]
-		response = self.factory.get(url_components)
-
-	
-		# response = posixpath.join(*url_components)
-		logger.info(str(dir(response)))
-
-
-
-
-
 
 	username = 'testuser'
 
+	def __init__(self, *args, **kwargs):
+		self.factory = RequestFactory()
+		super(UserViewTests, self).__init__(*args, **kwargs)
+
+	def testIndexPage(self):
+		'''	Verify that the application is able to retrieve the index page.
+		'''
+		r = self.client.get(reverse('chat:appindex'))
+		self.assertEqual(200, r.status_code)
+		# Check page title
+		self.assertIn('Guru Labs Chat Demo Application', r.content)
+		# Verify that all core assets are available for use
+		for assetlist in (CORE_ASSETLIST_JS, CORE_ASSETLIST_CSS):
+			for assetname in assetlist: self.assertIn(assetname, r.content)
+
+	
+	# def testGet(self):
+	# 	user = User.objects.create_user(username="guru")
+	# 	user.save()
+	# 	url_components = ['/chat/usr', str(user.pk)]
+	# 	response = self.factory.get(url_components)
+	
+	# 	# response = posixpath.join(*url_components)
+	# 	logger.info(str(dir(response)))
+
 	# Test ChatUserProfile creation
-	def testCreateUser(self):
+	def testCreateUserProfile(self):
 		''' Tests the creation of a chat user and user profile
 		'''
 		# Create test user
@@ -45,7 +65,6 @@ class UserViewTests(TestCase):
 		# self.assertEqual(user.pk, ChatUserProfile.objects.get(user=user).pk)
 		# self.assertEqual(user.user.pk, ChatUserProfile.objects.get(user=user).user.pk)
 		self.assertEqual(len(ChatUserProfile.objects.all()), 1)
-
 
 # # Test cases for Message model
 # class MessageTests(TestCase):
