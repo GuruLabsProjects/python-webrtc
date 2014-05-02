@@ -1,50 +1,65 @@
-import uuid, datetime, posixpath, logging
+import uuid, datetime, posixpath, logging, json
 from django.utils import timezone
 from django.db import models, IntegrityError
 from django.test import TestCase
-from django.contrib.auth.models import User, UserManager
 from django.test.client import RequestFactory
-from chat.models import ChatUserProfile, Message, Conversation
+from django.forms.models import model_to_dict
+from django.contrib.auth.models import User, UserManager
+from .models import ChatUserProfile, Message, Conversation
+from .views import (UserRestView, UserCreateView, MessageRestView, MessageCreateView,
+	ConversationCreateView, ConversationRestView)
+
 
 logger = logging.getLogger(__name__)
 
 class UserViewTests(TestCase):
-	self.factory = RequestFactory()
+	factory = RequestFactory()
+	username = 'guru'
+	user = None
+
+	def setUp(self):
+		# Create test user
+		self.user = User.objects.create_user(username=self.username)
+		self.user.save()
+		self.view = UserRestView()
 	
 	def testGet(self):
-		user = User.objects.create_user(username="guru")
-		user.save()
-		url_components = ['/chat/usr', str(user.pk)]
-		response = self.factory.get(url_components)
+		url_components = ['/chat/usr', str(self.user.pk)]
+		dummyGet = self.factory.get(''.join(['/chat/usr/', str(self.user.pk)]))
+		response = self.view.get(dummyGet,[], pk=str(self.user.pk))
+		logger.log(2, response.content)
+		response_user = json.loads(response.content)
 
-	
-		# response = posixpath.join(*url_components)
-		logger.info(str(dir(response)))
+	def testPut(self):
+		dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime.datetime) or \
+			isinstance(obj, datetime.date) else	json.JSONEncoder().default(obj)
 
+		userDict = model_to_dict(self.user)
+		userDict['email'] = 'guru@gurulabs.com'
+		jsonData = json.dumps(userDict, default=dthandler)
 
+		dummyPut = self.factory.put(''.join(['/chat/usr/',str(self.user.pk)]), jsonData)
+		response = self.view.put(dummyPut, content_type='application/json', data=jsonData,
+			pk=str(self.user.pk))
 
+		logger.log(2, response.content)
 
-
-
-	username = 'testuser'
+		self.assertEquals(User.objects.get(pk=self.user.pk).email, userDict['email'])
 
 	# Test ChatUserProfile creation
-	def testCreateUser(self):
-		''' Tests the creation of a chat user and user profile
-		'''
-		# Create test user
-		user = User.objects.create(username=self.username)
-		user.save()
-		# Create user profile
-		userp = ChatUserProfile(user=user)
-		userp.save()
+	# def testCreateUser(self):
+	# 	''' Tests the creation of a chat user and user profile
+	# 	'''
+	# 	# Create user profile
+	# 	userp = ChatUserProfile(user=self.user)
+	# 	userp.save()
 
-		# Do some basic tests to make sure it's saved into the database properly
-		self.assertEqual(self.username, user.username)
-		self.assertEqual(user.username, ChatUserProfile.objects.get(pk=user.pk).user.username)
-		# self.assertEqual(user.pk, ChatUserProfile.objects.get(user=user).pk)
-		# self.assertEqual(user.user.pk, ChatUserProfile.objects.get(user=user).user.pk)
-		self.assertEqual(len(ChatUserProfile.objects.all()), 1)
+	# 	# Do some basic tests to make sure it's saved into the database properly
+	# 	self.assertEqual(self.username, self.user.username)
+	# 	self.assertEqual(self.user.username, ChatUserProfile.objects.get(pk=self.user.pk).user.username)
+	# 	# self.assertEqual(user.pk, ChatUserProfile.objects.get(user=user).pk)
+	# 	# self.assertEqual(user.user.pk, ChatUserProfile.objects.get(user=user).user.pk)
+	# 	self.assertEqual(len(ChatUserProfile.objects.all()), 1)
 
 
 # # Test cases for Message model
