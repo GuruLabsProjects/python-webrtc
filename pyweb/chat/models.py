@@ -33,8 +33,8 @@ class Message(models.Model):
 		@raise IntegrityError if the pseudorandom message_id is not unique
 	'''
 	message_id = models.CharField(primary_key=True, max_length=36, 
-		unique=True, editable=False, default=uuid.uuid4().hex)
-	text = models.CharField(editable=False, max_length=256)
+		unique=True, default=uuid.uuid4().hex)
+	text = models.CharField(max_length=256)
 	# datetime.datetime.now doesn't work... something to do with time zone?
 	timestamp = models.DateTimeField(default=datetime.datetime.utcnow, verbose_name='date submitted')
 	sender = models.ForeignKey(User)
