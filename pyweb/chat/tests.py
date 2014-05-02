@@ -29,6 +29,7 @@ API_OBJECT_DELETE = 'object-delete'
 
 username = 'testuser'
 
+
 class DatabaseTests(TestCase):
 
 	def __init__(self, *args, **kwargs):
@@ -50,9 +51,12 @@ class DatabaseTests(TestCase):
 		self.assertEqual(user.username, ChatUserProfile.objects.get(pk=user.pk).user.username)
 		self.assertEqual(len(ChatUserProfile.objects.all()), 1)
 
+
 class GenericViewTests(TestCase):
+
 	def testIndexPage(self):
-		'''	Verify that the application is able to retrieve the index page.
+		'''	Verify that the application is able to retrieve the index page and that
+			all base assets are available.
 		'''
 		r = self.client.get(reverse('chat:appindex'))
 		self.assertEqual(200, r.status_code)
@@ -61,6 +65,7 @@ class GenericViewTests(TestCase):
 		# Verify that all core assets are available for use
 		for assetlist in (CORE_ASSETLIST_JS, CORE_ASSETLIST_CSS):
 			for assetname in assetlist: self.assertIn(assetname, r.content)
+
 
 class UserViewTests(TestCase):
 
