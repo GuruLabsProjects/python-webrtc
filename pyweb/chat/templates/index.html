@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 
 {% block header %}
-<h1>Messenger: A Simple Message Client</h1>
+<h1>Messenger: A Simple Chat Example</h1>
+{% endblock %}
+
+{% block footer %}
+<script src="{{ STATIC_URL }}js/chat/chat.models.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.views.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.main.js"></script>
 {% endblock %}
