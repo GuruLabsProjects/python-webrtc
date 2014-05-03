@@ -1,26 +1,23 @@
 from django.forms import ModelForm
 from django.contrib.auth.models import User
-from .models import ChatUserProfile, Conversation, Message
+from .models import Profile, Conversation, Message
 
-class ChatUserProfileForm(ModelForm):
+class ProfileForm(ModelForm):
 	class Meta:
-		model = ChatUserProfile
+		model = Profile
 		fields = ('user',)
 
 class UserForm(ModelForm):
 	class Meta:
 		model = User
-		fields = ('id', 'username', 'email', 'password', )
-		#'username'
+		fields = ('id', 'first_name', 'last_name', 'username', 'email', 'password', )
 
 class MessageForm(ModelForm):
 	class Meta:
 		model = Message
 		fields = ('message_id', 'text', 'timestamp', 'sender', )
-		# fields = '__all__'
 
 class ConversationForm(ModelForm):
 	class Meta:
 		model = Conversation
 		fields = ('id', 'participants', 'messages', )
-		# fields = 
