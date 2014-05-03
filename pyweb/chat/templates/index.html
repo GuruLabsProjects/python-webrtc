@@ -1,7 +1,22 @@
 {% extends 'base.html' %}
 
 {% block header %}
-<h1>Messenger: A Simple Chat Example</h1>
+<h1>Messenger: A Simple Chat Client</h1>
+{% endblock %}
+
+{% block navigation %}
+<nav class='top-bar' data-topbar>
+<section class='top-bar-section'>
+<ul class="left">
+	<li class="has-dropdown">
+		<a href="#">Messages</a>
+		<ul class="dropdown">
+			<li><a href="#">Create a new convers</a></li>
+		</ul>
+	</li>
+</ul>
+</section>
+</nav>
 {% endblock %}
 
 {% block footer %}
