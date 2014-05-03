@@ -1,9 +1,14 @@
 import uuid
 import datetime
+
 from django.utils import timezone
-from django.db import models
+from django.db import models, IntegrityError
+
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
+
+from .helpers import retry_action
+
 
 class Profile(models.Model):
 	''' User profile class for service users. Provides supplementary data, avatar
@@ -39,8 +44,8 @@ class Message(models.Model):
 	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='date submitted')
 	sender = models.ForeignKey(User)
 
-	def __init__(self, *args, **kwargs):
-		super(Message, self).__init__(*args, **kwargs)
+	# def __init__(self, *args, **kwargs):
+	#	super(Message, self).__init__(*args, **kwargs)
 		# print "called Message __init__"
 		# self.message_id = uuid.uuid4().hex
 
@@ -48,24 +53,17 @@ class Message(models.Model):
 		return uuid.uuid4().hex
 
 	def save(self, *args, **kwargs):
+		# Generate message_id if the model does not already have one
 		if not self.message_id:
 			self.message_id = self.generateMessageId()
-		success = False
-		failedAttempts = 0
-		while not success:
-			try:
-				failedAttempts+=1
-				super(self.__class__, self).save(*args, **kwargs)
-				success = True
-			except IntegrityError:
-				if(failedAttempts > 10):
-					raise
-				else:
-					self.message_id = self.generateMessageId()
+		# Save model instance, in cases with duplicate IDs, generate new ID and resave
+		def messagesave(): super(self.__class__, self).save(*args, **kwargs)
+		def duplicateid(): self.message_id = self.generateMessageId()
+		retry_action(messagesave, exception_actions={ IntegrityError: duplicateid })
 
 	def __str__(self):
 		# return ''.join([self.sender.user.username,self.text])
-		return ':'.join([str(s) for s in (self.sender.username, self.text, self.message_id) if s is not None])
+		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.message_id) if s is not None])
 
 class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
