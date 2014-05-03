@@ -3,37 +3,34 @@ import uuid, datetime, posixpath, logging, json
 from django.utils import timezone
 from django.db import models, IntegrityError
 
+from django.core import serializers
+from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import RequestFactory
-from django.core.urlresolvers import reverse
 
 from django.contrib.auth.models import User, UserManager
 from django.forms.models import model_to_dict
 
-from .models import ChatUserProfile, Message, Conversation
+from .util import DateTimeAwareEncoder, DateTimeAwareDecoder
+
+from .models import Profile, Message, Conversation
+from .forms import ProfileForm, UserForm, MessageForm, ConversationForm
 from .views import (UserRestView, UserCreateView, MessageRestView, MessageCreateView,
-	ConversationCreateView, ConversationRestView)
+	ConversationCreateView, ConversationRestView, ProfileRestView, ProfileCreateView,
+	API_FAIL, API_ERROR, API_RESULT, API_SUCCESS)
 
 logger = logging.getLogger(__name__)
 
 CORE_ASSETLIST_JS = ('jquery', 'underscore', 'backbone', 'modernizr', 'foundation')
 CORE_ASSETLIST_CSS = ('normalize', 'foundation')
 
-
-API_SUCCESS = 'success'
-API_FAIL = 'fail'
-API_ERROR = 'error'
-API_OBJECT_CREATE = 'object-create'
-API_OBJECT_UPDATE = 'object-update'
-API_OBJECT_DELETE = 'object-delete'
-
 username = 'testuser'
+invalidPk = 9999
 
 
 class DatabaseTests(TestCase):
 
 	def __init__(self, *args, **kwargs):
-		self.user = None
 		super(DatabaseTests, self).__init__(*args, **kwargs)
 
 	def testCreateUserProfile(self):
@@ -43,13 +40,13 @@ class DatabaseTests(TestCase):
 		user = User.objects.create(username=username)
 		user.save()
 		# Create user profile
-		userp = ChatUserProfile(user=user)
+		userp = Profile(user=user)
 		userp.save()
 
 		# Do some basic tests to make sure it's saved into the database properly
 		self.assertEqual(username, user.username)
-		self.assertEqual(user.username, ChatUserProfile.objects.get(pk=user.pk).user.username)
-		self.assertEqual(len(ChatUserProfile.objects.all()), 1)
+		self.assertEqual(user.username, Profile.objects.get(pk=user.pk).user.username)
+		self.assertEqual(len(Profile.objects.all()), 1)
 
 
 class GenericViewTests(TestCase):
@@ -66,6 +63,9 @@ class GenericViewTests(TestCase):
 		for assetlist in (CORE_ASSETLIST_JS, CORE_ASSETLIST_CSS):
 			for assetname in assetlist: self.assertIn(assetname, r.content)
 
+	def testDebug(self):
+		pass
+
 
 class UserViewTests(TestCase):
 
@@ -79,30 +79,503 @@ class UserViewTests(TestCase):
 		self.user = User.objects.create_user(username=username)
 		self.user.save()
 		self.view = UserRestView()
+		self.createView = UserCreateView()
 
-	def tearDown(self):
-		self.user.delete()
-		self.user.save()
+	def testGetSuccess(self):
+		dummyGet = self.factory.get(reverse('chat:api:user-rest', args=str(self.user.pk)))
+		response = self.view.get(dummyGet, pk=str(self.user.pk))
 
-	def testGet(self):
-		url_components = ['/chat/usr', str(self.user.pk)]
-		dummyGet = self.factory.get(''.join(['/chat/usr/', str(self.user.pk)]))
-		response = self.view.get(dummyGet,[], pk=str(self.user.pk))
-		logger.log(2, response.content)
-		response_user = json.loads(response.content)
+		userObj = json.loads(response.content, cls=DateTimeAwareDecoder)
+		userForm = UserForm(userObj, instance=User.objects.get(
+			pk=self.user.id))
 
-	def testPut(self):
-		dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime.datetime) or \
-			isinstance(obj, datetime.date) else	json.JSONEncoder().default(obj)
+		self.assertEqual(userForm.is_valid(), True)
 
+	def testGetError(self):
+		dummyGet = self.factory.get(reverse('chat:api:user-rest', args=str(self.user.pk)))
+		response = self.view.get(dummyGet, pk=invalidPk)
+		
+		userObj = json.loads(response.content, cls=DateTimeAwareDecoder)
+		userForm = UserForm(userObj, instance=User.objects.get(
+			pk=self.user.id))
+
+		self.assertEqual(userForm.is_valid(), False)
+
+	def testPutSuccess(self):
 		userDict = model_to_dict(self.user)
 		userDict['email'] = 'guru@gurulabs.com'
-		jsonData = json.dumps(userDict, default=dthandler)
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
 
-		dummyPut = self.factory.put(''.join(['/chat/usr/',str(self.user.pk)]), jsonData)
-		response = self.view.put(dummyPut, content_type='application/json', data=jsonData,
-			pk=str(self.user.pk))
+		dummyPut = self.factory.put(reverse('chat:api:user-rest', args=(
+			str(self.user.pk), ) ), jsonData)
+		response = self.view.put(dummyPut, content_type='application/json', pk=str(self.user.pk))
 
+		rdata = json.loads(response.content)
+
+		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 		logger.log(2, response.content)
-
 		self.assertEquals(User.objects.get(pk=self.user.pk).email, userDict['email'])
+
+	def testPutError(self):
+		userDict = model_to_dict(self.user)
+		userDict['email'] = 'guru@gurulabs.com'
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+
+		dummyPut = self.factory.put(reverse('chat:api:user-rest', args=(
+			invalidPk, ) ), jsonData)
+		response = self.view.put(dummyPut, content_type='application/json', pk=str(invalidPk))
+		rdata = json.loads(response.content)
+
+		self.assertEquals(User.objects.get(pk=self.user.pk).email, '')
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+
+		self.assertTrue(rdata[API_ERROR] is not None)
+
+	def testPostSuccess(self):
+		userDict = model_to_dict(self.user)
+		# invalidPk isn't used in db yet (not enforced by anything but for the tests to
+		#	work thats how it has to be)
+		userDict['id'] = None
+		userDict['username'] = 'guru_labs'
+		count = len(User.objects.all())
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+		self.assertEquals(count + 1, len(User.objects.all()))
+		try:
+			newUserObj = User.objects.get(pk=rdata['id'])
+		except User.DoesNotExist:
+			self.assertTrue(false)
+
+	def testDeleteSuccess(self):
+		self.assertEquals(len(User.objects.all()), 1)
+		dummyDelete = self.factory.delete(reverse('chat:api:user-rest',
+			args=(self.user.pk, )))
+		
+		response = self.view.delete(dummyDelete, pk=self.user.pk)
+
+		rdata = json.loads(response.content)
+		self.assertEquals(len(User.objects.all()), 0)
+		with self.assertRaises(User.DoesNotExist):
+			User.objects.get(pk=rdata['id'])
+
+	def testDeleteFailure(self):
+		self.assertEquals(len(User.objects.all()), 1)
+		dummyDelete = self.factory.delete(reverse('chat:api:user-rest',
+			args=(self.user.pk + 1, )))
+		
+		response = self.view.delete(dummyDelete, pk=self.user.pk + 1)
+
+		rdata = json.loads(response.content)
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(len(User.objects.all()), 1)
+
+
+	def testPostFailure(self):
+		userDict = model_to_dict(self.user)
+		# invalidPk isn't used in db yet (not enforced by anything but for the tests to
+		#	work thats how it has to be)
+		userDict['id'] = self.user.pk
+		userDict['username'] = username
+		count = len(User.objects.all())
+
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+
+		# 
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(count, len(User.objects.all()))
+
+
+class ProfileViewTests(TestCase):
+	def __init__(self, *args, **kwargs):
+		self.factory = RequestFactory()
+		self.user = None
+		self.profile = None
+		super(ProfileViewTests, self).__init__(*args, **kwargs)
+
+	def setUp(self):
+		# Create test user
+		self.user = User.objects.create_user(username=username)
+		self.profile = Profile(user=self.user)
+		self.user.save()
+		self.profile.save()
+		self.view = ProfileRestView()
+		self.createView = ProfileCreateView()
+
+	def testGet(self):
+		dummyGet = self.factory.get(reverse('chat:api:profile-rest',
+			args=(self.user.username, str(self.profile.pk))))
+		response = self.view.get(dummyGet, pk=str(self.profile.pk),
+			username=self.user.username)
+		
+		response_user = json.loads(response.content, cls=DateTimeAwareDecoder)
+		userForm = ProfileForm(response_user,
+			instance=Profile.objects.get(pk=response_user['id']))
+		#ensure the data we got is valid
+		self.assertEqual(userForm.is_valid(), True)
+
+	def testGetError(self):
+		dummyGet = self.factory.get(reverse('chat:api:profile-rest',
+			args=(self.user.username, str(self.profile.pk+1))))
+		response = self.view.get(dummyGet, pk=str(self.profile.pk + 1))
+		
+		profileObj = json.loads(response.content, cls=DateTimeAwareDecoder)
+		profileForm = ProfileForm(profileObj, instance=Profile.objects.get(
+			pk=self.profile.pk))
+
+		self.assertEqual(profileObj[API_RESULT], API_FAIL)
+
+		self.assertEqual(profileForm.is_valid(), False)
+
+	def testPutSuccess(self):
+		#Not really sure what to test here since Profile (so far) only has a one to one
+		#	method.  Maybe try changing the id?
+		user = User.objects.create_user(username='another_user')
+		user.save()
+		self.profile.user = user
+		profileDict = model_to_dict(self.profile)
+		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
+
+		dummyPut = self.factory.put(reverse('chat:api:profile-rest', 
+			args=(self.user.username, str(self.profile.pk)) ), jsonData)
+
+		response = self.view.put(dummyPut, content_type='application/json',
+			pk=str(self.profile.pk))
+
+		rdata = json.loads(response.content)
+
+		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
+		self.assertNotEquals(Profile.objects.get(pk=self.profile.pk).user.pk, self.user.pk)
+		self.assertEquals(Profile.objects.get(pk=self.profile.pk).user.pk, user.pk)
+
+	def testPutFailure(self):
+		#Not really sure what to test here since Profile (so far) only has a one to one
+		#	method.  Maybe try changing the id?
+		user = User.objects.create_user(username='another_user')
+		user.save()
+		self.profile.user = user
+		profileDict = model_to_dict(self.profile)
+		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
+
+		dummyPut = self.factory.put(reverse('chat:api:profile-rest', 
+			args=(self.user.username, str(self.profile.pk + 1)) ), jsonData)
+
+		response = self.view.put(dummyPut, content_type='application/json',
+			pk=str(self.profile.pk + 1))
+
+		rdata = json.loads(response.content)
+
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(Profile.objects.get(pk=self.profile.pk).user.pk, self.user.pk)
+		self.assertNotEquals(Profile.objects.get(pk=self.profile.pk).user.pk, user.pk)
+
+	def testDeleteSuccess(self):
+		self.assertEquals(len(Profile.objects.all()), 1)
+		dummyDelete = self.factory.delete(reverse('chat:api:profile-rest',
+			args=(self.user.username, str(self.profile.pk))))
+		
+		response = self.view.delete(dummyDelete, pk=self.profile.pk)
+
+		rdata = json.loads(response.content)
+		self.assertEquals(len(Profile.objects.all()), 0)
+		with self.assertRaises(Profile.DoesNotExist):
+			Profile.objects.get(pk=rdata['id'])
+
+	def testDeleteFailure(self):
+		self.assertEquals(len(Profile.objects.all()), 1)
+		dummyDelete = self.factory.delete(reverse('chat:api:profile-rest',
+			args=(self.user.username, str(self.profile.pk + 1))))
+		
+		response = self.view.delete(dummyDelete, pk=self.profile.pk + 1)
+
+		rdata = json.loads(response.content)
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(len(Profile.objects.all()), 1)
+
+	def testPostSuccess(self):
+		user = User.objects.create_user(username='another_user')
+		user.save()
+		self.profile.user = user
+		profileDict = model_to_dict(self.profile)
+
+		count = len(Profile.objects.all())
+		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:profile-create', 
+			args=(self.user.username, )), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+		self.assertEquals(count + 1, len(Profile.objects.all()))
+		try:
+			newProfileObj = Profile.objects.get(pk=rdata['id'])
+		except Profile.DoesNotExist:
+			self.assertTrue(false, "error with profile post")
+
+	def testPostFailure(self):
+		user = User.objects.create_user(username='another_user')
+		user.save()
+		user.pk = invalidPk
+		self.profile.user = user
+		profileDict = model_to_dict(self.profile)
+
+		count = len(Profile.objects.all())
+		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:profile-create', 
+			args=(self.user.username, )), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+		self.assertEquals(count, len(Profile.objects.all()))
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+
+
+class MessageViewTest(TestCase):
+	def __init__(self, *args, **kwargs):
+		self.factory = RequestFactory()
+		self.user = None
+		self.conversation = None
+		self.msg1 = None
+		self.msg2 = None
+		super(MessageViewTest, self).__init__(*args, **kwargs)
+
+	def setUp(self):
+		# Create test user
+		self.user = User.objects.create_user(username=username)
+		self.user.save()
+		self.msg1 = Message(sender=self.user, text="heres the first message")
+		self.msg1.save()
+
+		self.msg2 = Message(sender=self.user, text="heres the second message")
+		self.msg2.save()
+		
+		self.conversation = Conversation()
+		self.conversation.save()
+		self.conversation.participants.add(self.user)
+		self.conversation.messages.add(self.msg1)
+		self.conversation.messages.add(self.msg2)
+		self.conversation.save()
+		self.view = MessageRestView()
+		self.createView = MessageCreateView()
+
+	def testGetSuccess(self):
+		dummyGet = self.factory.get(reverse('chat:api:message-rest',
+			args=(self.msg1.message_id, )))
+		response = self.view.get(dummyGet, message_id=self.msg1.message_id)
+
+		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
+
+		messageForm = MessageForm(response_message,
+			instance=Message.objects.get(message_id=response_message['message_id']))
+
+		#ensure the data we got is valid
+		self.assertEqual(messageForm.is_valid(), True)
+
+	def testGetFail(self):
+		dummyGet = self.factory.get(reverse('chat:api:message-rest',
+			args=('bogusmessageid', )))
+		response = self.view.get(dummyGet, message_id='bogusmessageid')
+
+		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
+
+		self.assertEquals(response_message[API_RESULT], API_FAIL)
+
+		with self.assertRaises(Message.DoesNotExist):
+			msg = Message.objects.get(message_id='bogusmessageid')
+
+	def testDeleteSuccess(self):
+		self.assertEquals(len(Message.objects.all()), 2)
+		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
+			args=(self.msg1.message_id, )))
+		
+		response = self.view.delete(dummyDelete, message_id=self.msg1.message_id)
+
+		rdata = json.loads(response.content)
+		self.assertEquals(len(Message.objects.all()), 1)
+		with self.assertRaises(Message.DoesNotExist):
+			Message.objects.get(message_id=rdata['id'])
+
+	def testDeleteFailure(self):
+		self.assertEquals(len(Message.objects.all()), 2)
+		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
+			args=('bogusmessageid', )))
+		
+		response = self.view.delete(dummyDelete, message_id='bogusmessageid')
+
+		rdata = json.loads(response.content)
+		self.assertEquals(len(Message.objects.all()), 2)
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+
+	def testPut(self):
+		#this should always fail
+		user = User.objects.create_user(username='bogusGuru')
+		user.save()
+		self.msg1.sender = user
+		messageDict = model_to_dict(self.msg1)
+		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
+
+		dummyPut = self.factory.put(reverse('chat:api:message-rest', args=(
+			str(self.msg1.pk), ) ), jsonData)
+		response = self.view.put(dummyPut, content_type='application/json', pk=str(self.msg1.pk))
+
+		self.assertTrue(response.status_code == 400)
+
+	def testPostSuccess(self):
+		msg = Message(sender=self.user, text='new message')
+		msg.message_id = 'uniqueuniqueunique'
+		messageDict = model_to_dict(msg)
+		
+		count = len(Message.objects.all())
+		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:message-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+
+		rdata = json.loads(response.content)
+		
+		self.assertEquals(count + 1, len(Message.objects.all()))
+		try:
+			newMessageObj = Message.objects.get(pk=rdata['message_id'])
+		except Message.DoesNotExist:
+			self.assertTrue(false, "error with message post")
+		self.assertTrue(Message.objects.get(pk=rdata['message_id']).text == msg.text)
+
+	def testPostFailure(self):
+		msg = Message(sender=self.user, text='new message')
+		msg.message_id = self.msg1.message_id
+		messageDict = model_to_dict(msg)
+		
+		count = len(Message.objects.all())
+		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:message-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+
+		rdata = json.loads(response.content)
+		
+		self.assertEquals(count, len(Message.objects.all()))
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+
+
+
+class ConversationViewTests(TestCase):
+	def __init__(self, *args, **kwargs):
+		self.factory = RequestFactory()
+		self.user = None
+		self.conversation = None
+		self.msg1 = None
+		self.msg2 = None
+		super(self.__class__, self).__init__(*args, **kwargs)
+
+	def setUp(self):
+		# Create test user
+		self.user = User.objects.create_user(username=username)
+		self.user.save()
+		self.msg1 = Message(sender=self.user, text="heres the first message")
+		self.msg1.save()
+
+		self.msg2 = Message(sender=self.user, text="heres the second message")
+		self.msg2.save()
+		
+		self.conversation = Conversation()
+		self.conversation.save()
+		self.conversation.participants.add(self.user)
+		self.conversation.messages.add(self.msg1)
+		self.conversation.messages.add(self.msg2)
+		self.conversation.save()
+		self.view = ConversationRestView()
+		self.createView = ConversationCreateView()
+
+	def testGetSuccess(self):
+		dummyGet = self.factory.get(reverse('chat:api:conversation-rest', args=str(self.conversation.pk)))
+		response = self.view.get(dummyGet, pk=str(self.conversation.pk))
+
+		msgs = json.loads(response.content, cls=DateTimeAwareDecoder)
+
+		dbmsgs = Conversation.objects.get(pk=self.conversation.pk).messages.all()
+
+		self.assertEquals(len(msgs), len(dbmsgs))
+
+		for msg in msgs:
+			foundIt = False
+			for dbmsg in dbmsgs:
+				if msg['id'] == dbmsg.pk:
+					if msg['text'] is dbmsg.text:
+						foundIt = True
+						break
+			self.assertFalse(foundIt, "%s not found in %s" % (msg, str(dbmsgs)))
+
+	def testPostSuccess(self):
+		convo = Conversation()
+		conversationDict = model_to_dict(convo)
+		
+		count = len(Conversation.objects.all())
+		jsonData = json.dumps(conversationDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+
+		rdata = json.loads(response.content)
+		
+		self.assertEquals(count + 1, len(Conversation.objects.all()))
+		try:
+			newConvoObj = Conversation.objects.get(pk=rdata['id'])
+		except Conversation.DoesNotExist:
+			self.assertTrue(false, "error with message post")
+
+	def testPut(self):
+		#this should always fail
+		convo = Conversation()
+		convo.save()
+		convo.participants.add(self.user)
+		
+		convoDict = model_to_dict(convo)
+		jsonData = json.dumps(convoDict, cls=DateTimeAwareEncoder)
+
+		dummyPut = self.factory.put(reverse('chat:api:conversation-rest', args=(
+			str(convo.pk), ) ), jsonData)
+		response = self.view.put(dummyPut, content_type='application/json', pk=str(convo.pk))
+		
+		rdata = json.loads(response.content)
+
+		self.assertTrue(response.status_code == 200)
+		self.assertEquals(len(Conversation.objects.get(pk=rdata['id']).participants.all()), 1)
+		self.assertEquals(Conversation.objects.get(pk=rdata['id']).participants.all()[0].pk, self.user.pk)
+		self.assertEquals(Conversation.objects.get(pk=rdata['id']).participants.all()[0].username, self.user.username)
+		self.assertTrue(Conversation.objects.get(pk=rdata['id']).participants.all()[0].username == self.user.username)
+
+	def testDelete(self):
+		#this should always fail
+		dummyPut = self.factory.put(reverse('chat:api:message-rest',
+			args=(self.conversation.pk, ) ))
+		response = self.view.delete(dummyPut, content_type='application/json', pk=str(self.conversation.pk))
+
+		self.assertTrue(response.status_code == 400)
+
+	# def testPostFailure(self):
+	# 	badDict = model_to_dict(self.user)
+		
+	# 	count = len(Conversation.objects.all())
+	# 	jsonData = json.dumps(badDict, cls=DateTimeAwareEncoder)
+	# 	dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
+	# 		content_type='application/json')
+
+	# 	response = self.createView.post(dummyPost, content_type='application/json')
+
+	# 	rdata = json.loads(response.content)
+		
+
+	# 	self.assertEquals(count, len(Conversation.objects.all()))
+	# 	self.assertEquals(rdata[API_RESULT], API_FAIL)
