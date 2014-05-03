@@ -26,11 +26,11 @@ API_FAIL = 'fail'
 API_ERROR = 'error'
 API_RESULT = 'result'
 
-API_INVALID_DATA = "invalid data:\n %s"
+API_INVALID_DATA = "invalid data: (%s) - errors:(%s)"
 API_BAD_PK = "id %s does not exist (%s)"
 
-class CreateView(View):
-	def get(self, request, *args, **kwargs):
+class BaseView(View):
+	def invalidRequest(self):
 		response = {}
 		try:
 			raise Exception
@@ -38,24 +38,16 @@ class CreateView(View):
 			response[API_RESULT] = API_FAIL
 			response[API_ERROR] = str(e)
 			return HttpResponseBadRequest(response)
+
+class CreateView(BaseView):
+	def get(self, request, *args, **kwargs):
+		return self.invalidRequest()
 
 	def put(self, request, *args, **kwargs):
-		response = {}
-		try:
-			raise Exception
-		except Exception as e:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = str(e)
-			return HttpResponseBadRequest(response)
+		return self.invalidRequest()
 
 	def delete(self, request, *args, **kwargs):
-		response = {}
-		try:
-			raise Exception
-		except Exception as e:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = str(e)
-			return HttpResponseBadRequest(response)
+		return self.invalidRequest()
 
 	def post(self, request, *args, **kwargs):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
@@ -64,16 +56,9 @@ class CreateView(View):
 			objForm = self.form(rdata)
 			if not objForm.is_valid():
 				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % str(rdata)
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
 			else:
 				obj = objForm.save()
-				foundPrimaryKey = False
-				# for field in self.model._meta.fields:
-				# 	if field.primary_key:
-				# 		response[self.pk] = field.data
-				# 		foundPrimaryKey = True
-				# if not foundPrimaryKey:
-				# 	response['id'] = None
 				response[self.pkString] = obj.pk
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
@@ -84,14 +69,14 @@ class CreateView(View):
 		return HttpResponseBadRequest(json.dumps(response))
 
 
-class RestView(View):
+class RestView(BaseView):
 	''' Abstract class for RestView's.  Make sure each of the following are declared
-		within child class.  RestView will take care of get, put*, delete*.
+		within child class.  RestView will take care of get, put, and delete.  You 
+		must pass the primary key as a kwarg with self.pkString as the key to identify
+		it.
 		self.model - Points to the Django model class
 		self.form - points to the Django FormModel for the self.model class
 		self.pkString - The primary key 'key' that will be passed through kwargs
-
-		*not implemented yet
 	'''
 	def get(self, request, *args, **kwargs):
 		try:
@@ -141,13 +126,7 @@ class RestView(View):
 		return HttpResponse(json.dumps(response))
 
 	def post(self, request, *args, **kwargs):
-		response = {}
-		try:
-			raise Exception
-		except Exception as e:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = str(e)
-			return HttpResponseBadRequest(response)
+		return self.invalidRequest()
 
 class UserRestView(RestView):
 	def __init__(self, *args, **kwargs):
@@ -163,27 +142,19 @@ class UserCreateView(CreateView):
 		self.pkString = 'id'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-
 class ProfileRestView(RestView):
-
 	def __init__(self, *args, **kwargs):
 		self.model = Profile
 		self.form = ProfileForm
 		self.pkString = 'pk'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-class ProfileCreateView(View):
-	def get(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def put(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def delete(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def post(self, request, *args, **kwargs):
-		pass
+class ProfileCreateView(CreateView):
+	def __init__(self, *args, **kwargs):
+		self.model = Profile
+		self.form = ProfileForm
+		self.pkString = 'id'
+		super(self.__class__, self).__init__(*args, **kwargs)
 
 class ConversationRestView(RestView):
 	def __init__(self, *args, **kwargs):
@@ -192,18 +163,31 @@ class ConversationRestView(RestView):
 		self.pkString = 'pk'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-class ConversationCreateView(View):
-	def get(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def put(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
+	def get(self, *args, **kwargs):
+		try:
+			#TODO:  is there a more efficient way to do this db query and build response?			
+			obj = self.model.objects.get(pk=kwargs[self.pkString])
+			msgs = list(obj.messages.all())
+			response = []
+			for msg in msgs:
+				response.append({'id' : msg.pk, 'text' : msg.text})
+			return HttpResponse(json.dumps(response, cls=DateTimeAwareEncoder),
+				content_type='application/json')
+		except self.model.DoesNotExist:
+			response = {}
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+			return HttpResponseBadRequest(json.dumps(response))
 
 	def delete(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
+		return self.invalidRequest()
 
-	def post(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
+class ConversationCreateView(CreateView):
+	def __init__(self, *args, **kwargs):
+		self.model = Conversation
+		self.form = ConversationForm
+		self.pkString = 'id'
+		super(self.__class__, self).__init__(*args, **kwargs)
 
 class MessageRestView(RestView):
 	def __init__(self, *args, **kwargs):
@@ -213,20 +197,14 @@ class MessageRestView(RestView):
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 	def put(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
+		return self.invalidRequest()
 
-class MessageCreateView(View):
-	def get(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def put(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def delete(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def post(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()		
+class MessageCreateView(CreateView):
+	def __init__(self, *args, **kwargs):
+		self.model = Message
+		self.form = MessageForm
+		self.pkString = 'message_id'
+		super(self.__class__, self).__init__(*args, **kwargs)
 
 
 def application_index(request):

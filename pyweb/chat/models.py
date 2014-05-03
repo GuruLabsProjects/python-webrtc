@@ -71,8 +71,8 @@ class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
 		participants and many messages.
 	'''
-	participants = models.ManyToManyField(User)
-	messages = models.ManyToManyField(Message)
+	participants = models.ManyToManyField(User, blank=True)
+	messages = models.ManyToManyField(Message, blank=True)
 
 	def __str__(self):
-		return ':'.join(["Conversation",self.pk])
+		return ':'.join(["Conversation", str(self.pk)])

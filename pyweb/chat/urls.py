@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, url, include
 
-from .views import UserCreateView, UserRestView, \
-	MessageCreateView, MessageRestView, ConversationCreateView, ConversationRestView
+from .views import UserCreateView, UserRestView, MessageCreateView, MessageRestView, \
+	ConversationCreateView, ConversationRestView, ProfileCreateView, ProfileRestView
 
 api_urlpatterns = patterns('',
 	# Message REST URLs
@@ -14,8 +14,8 @@ api_urlpatterns = patterns('',
     url(r'^user/$', UserCreateView.as_view(), name='user-create'),
 	url(r'^user/(?P<pk>\d+)/$', UserRestView.as_view(), name='user-rest'),
 	#Profile REST URLs
-	url(r'^user/(?P<username>\w+)/profile/$', UserCreateView.as_view(), name='profile-create'),
-	url(r'^user/(?P<username>\w+)/profile/(?P<pk>\d+)/$', UserRestView.as_view(), name='profile-rest')
+	url(r'^user/(?P<username>\w+)/profile/$', ProfileCreateView.as_view(), name='profile-create'),
+	url(r'^user/(?P<username>\w+)/profile/(?P<pk>\d+)/$', ProfileRestView.as_view(), name='profile-rest')
 )
 
 urlpatterns = patterns('chat.views',
