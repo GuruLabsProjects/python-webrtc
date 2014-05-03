@@ -74,6 +74,7 @@ class UserViewTests(TestCase):
 		self.user = User.objects.create_user(username=username)
 		self.user.save()
 		self.view = UserRestView()
+		self.createView = UserCreateView()
 
 	def testGetSuccess(self):
 		dummyGet = self.factory.get(reverse('chat:api:user-rest', args=str(self.user.pk)))
@@ -124,6 +125,46 @@ class UserViewTests(TestCase):
 		self.assertEquals(rdata[API_RESULT], API_FAIL)
 
 		self.assertTrue(rdata[API_ERROR] is not None)
+
+	def testPostSuccess(self):
+		userDict = model_to_dict(self.user)
+		# invalidPk isn't used in db yet (not enforced by anything but for the tests to
+		#	work thats how it has to be)
+		userDict['id'] = None
+		userDict['username'] = 'guru_labs'
+		count = len(User.objects.all())
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+		self.assertEquals(count + 1, len(User.objects.all()))
+		try:
+			newUserObj = User.objects.get(pk=rdata['id'])
+		except User.DoesNotExist:
+			self.assertTrue(false)
+
+
+	def testPostFailure(self):
+		userDict = model_to_dict(self.user)
+		# invalidPk isn't used in db yet (not enforced by anything but for the tests to
+		#	work thats how it has to be)
+		userDict['id'] = self.user.pk
+		userDict['username'] = username
+		count = len(User.objects.all())
+
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+
+		# 
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(count, len(User.objects.all()))
+
 
 class ProfileViewTests(TestCase):
 	def __init__(self, *args, **kwargs):

@@ -25,10 +25,6 @@ API_SUCCESS = 'success'
 API_FAIL = 'fail'
 API_ERROR = 'error'
 API_RESULT = 'result'
-# API_DETAIL = 'detail'
-# API_OBJECT_CREATE = 'object-create'
-# API_OBJECT_UPDATE = 'object-update'
-# API_OBJECT_DELETE = 'object-delete'
 
 API_INVALID_DATA = "invalid data:\n %s"
 API_BAD_PK = "id %s does not exist (%s)"
@@ -62,7 +58,30 @@ class CreateView(View):
 			return HttpResponseBadRequest(response)
 
 	def post(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()	
+		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+		response = {}
+		try:
+			objForm = self.form(rdata)
+			if not objForm.is_valid():
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % str(rdata)
+			else:
+				obj = objForm.save()
+				foundPrimaryKey = False
+				# for field in self.model._meta.fields:
+				# 	if field.primary_key:
+				# 		response[self.pk] = field.data
+				# 		foundPrimaryKey = True
+				# if not foundPrimaryKey:
+				# 	response['id'] = None
+				response[self.pkString] = obj.pk
+				response[API_RESULT] = API_SUCCESS
+				return HttpResponse(json.dumps(response))
+
+		except self.model.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+		return HttpResponseBadRequest(json.dumps(response))
 
 
 class RestView(View):
@@ -95,7 +114,7 @@ class RestView(View):
 
 			if not objForm.is_valid():
 				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % request.body
+				response[API_ERROR] = API_INVALID_DATA % str(rdata)
 			else:
 				objForm.save()
 				response['id'] = objForm.data['id']
@@ -137,18 +156,13 @@ class UserRestView(RestView):
 		self.pkString = 'pk'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-class UserCreateView(View):
-	def get(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
+class UserCreateView(CreateView):
+	def __init__(self, *args, **kwargs):
+		self.model = User
+		self.form = UserForm
+		self.pkString = 'id'
+		super(self.__class__, self).__init__(*args, **kwargs)
 
-	def put(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def delete(self, request, *args, **kwargs):
-		return HttpResponseBadRequest()
-
-	def post(self, request, *args, **kwargs):
-		pass
 
 class ProfileRestView(RestView):
 
