@@ -534,27 +534,43 @@ class ConversationViewTests(TestCase):
 		#this should always fail
 		convo = Conversation()
 		convo.save()
-		self.msg1.sender = user
-		messageDict = model_to_dict(self.msg1)
-		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
+		convo.participants.add(self.user)
+		
+		convoDict = model_to_dict(convo)
+		jsonData = json.dumps(convoDict, cls=DateTimeAwareEncoder)
 
-		dummyPut = self.factory.put(reverse('chat:api:message-rest', args=(
-			str(self.msg1.pk), ) ), jsonData)
-		response = self.view.put(dummyPut, content_type='application/json', pk=str(self.msg1.pk))
+		dummyPut = self.factory.put(reverse('chat:api:conversation-rest', args=(
+			str(convo.pk), ) ), jsonData)
+		response = self.view.put(dummyPut, content_type='application/json', pk=str(convo.pk))
+		
+		rdata = json.loads(response.content)
+
+		self.assertTrue(response.status_code == 200)
+		self.assertEquals(len(Conversation.objects.get(pk=rdata['id']).participants.all()), 1)
+		self.assertEquals(Conversation.objects.get(pk=rdata['id']).participants.all()[0].pk, self.user.pk)
+		self.assertEquals(Conversation.objects.get(pk=rdata['id']).participants.all()[0].username, self.user.username)
+		self.assertTrue(Conversation.objects.get(pk=rdata['id']).participants.all()[0].username == self.user.username)
+
+	def testDelete(self):
+		#this should always fail
+		dummyPut = self.factory.put(reverse('chat:api:message-rest',
+			args=(self.conversation.pk, ) ))
+		response = self.view.delete(dummyPut, content_type='application/json', pk=str(self.conversation.pk))
 
 		self.assertTrue(response.status_code == 400)
 
-	def testPostFailure(self):
-		badDict = model_to_dict(self.user)
+	# def testPostFailure(self):
+	# 	badDict = model_to_dict(self.user)
 		
-		count = len(Conversation.objects.all())
-		jsonData = json.dumps(badDict, cls=DateTimeAwareEncoder)
-		dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
-			content_type='application/json')
+	# 	count = len(Conversation.objects.all())
+	# 	jsonData = json.dumps(badDict, cls=DateTimeAwareEncoder)
+	# 	dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
+	# 		content_type='application/json')
 
-		response = self.createView.post(dummyPost, content_type='application/json')
+	# 	response = self.createView.post(dummyPost, content_type='application/json')
 
-		rdata = json.loads(response.content)
+	# 	rdata = json.loads(response.content)
 		
-		self.assertEquals(count, len(Conversation.objects.all()))
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+
+	# 	self.assertEquals(count, len(Conversation.objects.all()))
+	# 	self.assertEquals(rdata[API_RESULT], API_FAIL)

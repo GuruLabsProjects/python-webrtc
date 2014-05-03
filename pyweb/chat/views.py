@@ -179,6 +179,8 @@ class ConversationRestView(RestView):
 			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 
+	
+
 	def delete(self, request, *args, **kwargs):
 		return self.invalidRequest()
 
