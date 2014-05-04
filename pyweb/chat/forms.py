@@ -15,7 +15,7 @@ class UserForm(ModelForm):
 class MessageForm(ModelForm):
 	class Meta:
 		model = Message
-		fields = ('message_id', 'text', 'timestamp', 'sender', )
+		fields = ('id', 'text', 'timestamp', 'sender', )
 
 class ConversationForm(ModelForm):
 	class Meta:

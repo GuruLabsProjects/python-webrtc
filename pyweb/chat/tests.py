@@ -369,13 +369,13 @@ class MessageViewTest(TestCase):
 
 	def testGetSuccess(self):
 		dummyGet = self.factory.get(reverse('chat:api:message-rest',
-			args=(self.msg1.message_id, )))
-		response = self.view.get(dummyGet, message_id=self.msg1.message_id)
+			args=(self.msg1.id, )))
+		response = self.view.get(dummyGet, id=self.msg1.id)
 
 		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
 
 		messageForm = MessageForm(response_message,
-			instance=Message.objects.get(message_id=response_message['message_id']))
+			instance=Message.objects.get(pk=response_message['id']))
 
 		#ensure the data we got is valid
 		self.assertEqual(messageForm.is_valid(), True)
@@ -383,14 +383,14 @@ class MessageViewTest(TestCase):
 	def testGetFail(self):
 		dummyGet = self.factory.get(reverse('chat:api:message-rest',
 			args=('bogusmessageid', )))
-		response = self.view.get(dummyGet, message_id='bogusmessageid')
+		response = self.view.get(dummyGet, id='bogusmessageid')
 
 		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
 
 		self.assertEquals(response_message[API_RESULT], API_FAIL)
 
 		with self.assertRaises(Message.DoesNotExist):
-			msg = Message.objects.get(message_id='bogusmessageid')
+			msg = Message.objects.get(pk='bogusmessageid')
 
 	def testDeleteSuccess(self):
 		self.assertEquals(len(Message.objects.all()), 2)
@@ -560,7 +560,8 @@ class ConversationViewTests(TestCase):
 		#this should always fail
 		dummyPut = self.factory.put(reverse('chat:api:message-rest',
 			args=(self.conversation.pk, ) ))
-		response = self.view.delete(dummyPut, content_type='application/json', pk=str(self.conversation.pk))
+		response = self.view.delete(dummyPut, 
+			content_type='application/json', pk=str(self.conversation.pk))
 
 		self.assertTrue(response.status_code == 400)
 

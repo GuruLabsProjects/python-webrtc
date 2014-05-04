@@ -16,18 +16,6 @@ class Profile(models.Model):
 	'''
  	user = models.OneToOneField(User)
 
- 	# @staticmethod
- 	# def createUser(username, email=None, password=None, **kwargs):
- 	# 	''' Convenience method to create a user and profile simultaneously
- 	# 		@input username: Username, must be unique
- 	# 		@input email (default=None): Email for user
- 	# 		@input password (default=None): User password
- 	# 		@returns user profile object
- 	# 	'''
- 	# 	cuser = User.objects.create_user(username=username, email=email,
- 	# 		password=password, **kwargs)
- 	# 	return Profile(user=cuser)
-
 	def __str__(self):
 		return self.user.username		
 
@@ -37,40 +25,43 @@ class Message(models.Model):
 		message was sent, and a foreign key linking it to the sender
 		@raise IntegrityError if the pseudorandom message_id is not unique
 	'''
-	message_id = models.CharField(primary_key=True, max_length=36, unique=True)
+	id = models.CharField(primary_key=True, max_length=36, unique=True)
 	text = models.CharField(max_length=256)
-	# datetime.datetime.now doesn't work... something to do with time zone?
-	# timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='date submitted')
 	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='date submitted')
 	sender = models.ForeignKey(User)
 
-	# def __init__(self, *args, **kwargs):
-	#	super(Message, self).__init__(*args, **kwargs)
-		# print "called Message __init__"
-		# self.message_id = uuid.uuid4().hex
-
-	def generateMessageId(self):
-		return uuid.uuid4().hex
+	def generateMessageId(self): return uuid.uuid4().hex
 
 	def save(self, *args, **kwargs):
-		# Generate message_id if the model does not already have one
-		if not self.message_id:
-			self.message_id = self.generateMessageId()
+		# Generate message id if the model does not already have one
+		if not self.id: self.id = self.generateMessageId()
 		# Save model instance, in cases with duplicate IDs, generate new ID and resave
 		def messagesave(): super(self.__class__, self).save(*args, **kwargs)
-		def duplicateid(): self.message_id = self.generateMessageId()
-		retry_action(messagesave, exception_actions={ IntegrityError: duplicateid })
+		def duplicateid(): self.id = self.generateMessageId()
+		retry_action(messagesave, exception_actions={ IntegrityError : duplicateid })
 
 	def __str__(self):
 		# return ''.join([self.sender.user.username,self.text])
-		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.message_id) if s is not None])
+		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.id) if s is not None])
 
 class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
 		participants and many messages.
 	'''
+	id = models.CharField(primary_key=True, max_length=36, unique=True)
 	participants = models.ManyToManyField(User, blank=True)
 	messages = models.ManyToManyField(Message, blank=True)
 
 	def __str__(self):
 		return ':'.join(["Conversation", str(self.pk)])
+
+	def generateConversationId(self): return uuid.uuid4().hex
+
+	def save(self, *args, **kwargs):
+		# Generate conversation id if the model does not already have one
+		if not self.id: self.generateConversationId()
+		# Save model instance, in cases with duplicate IDs, generate a new ID and resave
+		def conversationsave(): super(self.__class__, self).save(*args, **kwargs)
+		def duplicateid(): self.id = self.generateConversationId()
+		retry_action(conversationsave, exception_actions={ IntegrityError : duplicateid })
+
