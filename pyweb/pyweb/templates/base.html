@@ -5,18 +5,14 @@
 {% block pageassets %}{% endblock %}
 </head>
 
-<body>
+<body class="{% block body-background %}{% endblock %}">
 <!-- Page Header -->
-<header id="chat-header" class="row">{% block header %}{% endblock %}</header>
+<header id="chat-header">{% block header %}{% endblock %}</header>
 <!-- Page Top Navigation -->
-<nav id="chat-topnav" class="row">{% block navigation %}{% endblock %}</nav>
+<nav id="chat-topnav">{% block navigation %}{% endblock %}</nav>
 <!-- Page Content -->
-<section id="chat-pagecontent" class="row">
-{% block content %}{% endblock %}
-</section>
-<footer id="chat-footer" class="row">
-{% block footer %}{% endblock %}
-</footer>
+<section id="chat-pagecontent">{% block content %}{% endblock %}</section>
+<footer id="chat-footer">{% block footer %}{% endblock %}</footer>
 </body>
 
 </html>
