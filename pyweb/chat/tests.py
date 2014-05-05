@@ -15,9 +15,9 @@ from .util import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import ProfileForm, UserForm, MessageForm, ConversationForm
-from .views import (UserRestView, UserCreateView, MessageRestView, MessageCreateView,
-	ConversationCreateView, ConversationRestView, ProfileRestView, ProfileCreateView,
-	API_FAIL, API_ERROR, API_RESULT, API_SUCCESS)
+from .views import UserRestView, UserCreateView, MessageRestView, MessageCreateView, \
+	ConversationCreateView, ConversationRestView, ProfileRestView, ProfileCreateView, \
+	API_FAIL, API_ERROR, API_RESULT, API_SUCCESS 
 
 logger = logging.getLogger(__name__)
 
