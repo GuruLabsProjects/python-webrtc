@@ -1,5 +1,4 @@
 import uuid, json, logging, datetime
-from abc import ABCMeta
 
 from django.shortcuts import render, render_to_response
 
@@ -65,7 +64,7 @@ class CreateView(BaseView):
 
 		except self.model.DoesNotExist:
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 		return HttpResponseBadRequest(json.dumps(response))
 
 
@@ -80,20 +79,20 @@ class RestView(BaseView):
 	'''
 	def get(self, request, *args, **kwargs):
 		try:
-			obj = self.model.objects.get(pk=kwargs[self.pkString])
+			obj = self.model.objects.get(pk=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
 				content_type='application/json')
 		except self.model.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 
 	def put(self, request, *args, **kwargs):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
-			dbObj = self.model.objects.get(pk=kwargs[self.pkString])
+			dbObj = self.model.objects.get(pk=kwargs['pk'])
 
 			objForm = self.form(rdata, instance=dbObj)
 
@@ -108,20 +107,20 @@ class RestView(BaseView):
 
 		except self.model.DoesNotExist:
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 		return HttpResponseBadRequest(json.dumps(response))
 
 	def delete(self, request, *args, **kwargs):
 		response = {}
 		try:
-			dbObj = self.model.objects.get(pk=kwargs[self.pkString])
+			dbObj = self.model.objects.get(pk=kwargs['pk'])
 			dbObj.delete()
-			response['id'] = kwargs[self.pkString]
+			response['id'] = kwargs['pk']
 			response[API_RESULT] = API_SUCCESS
 		except self.model.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 		return HttpResponse(json.dumps(response))
 
@@ -166,7 +165,7 @@ class ConversationRestView(RestView):
 	def get(self, *args, **kwargs):
 		try:
 			#TODO:  is there a more efficient way to do this db query and build response?			
-			obj = self.model.objects.get(pk=kwargs[self.pkString])
+			obj = self.model.objects.get(pk=kwargs['pk'])
 			msgs = list(obj.messages.all())
 			response = []
 			for msg in msgs:
@@ -176,7 +175,7 @@ class ConversationRestView(RestView):
 		except self.model.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 
 	def delete(self, request, *args, **kwargs):

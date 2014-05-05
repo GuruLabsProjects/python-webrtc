@@ -99,7 +99,7 @@ class UserViewTests(TestCase):
 
 		userObj = json.loads(response.content, cls=DateTimeAwareDecoder)
 		userForm = UserForm(userObj, instance=User.objects.get(
-			pk=self.user.id))
+			pk=self.user.pk))
 
 		self.assertEqual(userForm.is_valid(), True)
 
@@ -382,7 +382,7 @@ class MessageViewTest(TestCase):
 	def testGetSuccess(self):
 		dummyGet = self.factory.get(reverse('chat:api:message-rest',
 			args=(self.msg1.id, )))
-		response = self.view.get(dummyGet, id=self.msg1.id)
+		response = self.view.get(dummyGet, pk=self.msg1.id)
 
 		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
 
@@ -395,7 +395,7 @@ class MessageViewTest(TestCase):
 	def testGetFail(self):
 		dummyGet = self.factory.get(reverse('chat:api:message-rest',
 			args=('bogusmessageid', )))
-		response = self.view.get(dummyGet, id='bogusmessageid')
+		response = self.view.get(dummyGet, pk='bogusmessageid')
 
 		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
 
@@ -409,19 +409,19 @@ class MessageViewTest(TestCase):
 		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
 			args=(self.msg1.id, )))
 		
-		response = self.view.delete(dummyDelete, id=self.msg1.id)
+		response = self.view.delete(dummyDelete, pk=self.msg1.id)
 
 		rdata = json.loads(response.content)
 		self.assertEquals(len(Message.objects.all()), 1)
 		with self.assertRaises(Message.DoesNotExist):
-			Message.objects.get(id=rdata['id'])
+			Message.objects.get(pk=rdata['id'])
 
 	def testDeleteFailure(self):
 		self.assertEquals(len(Message.objects.all()), 2)
 		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
 			args=('bogusmessageid', )))
 		
-		response = self.view.delete(dummyDelete, id='bogusmessageid')
+		response = self.view.delete(dummyDelete, pk='bogusmessageid')
 
 		rdata = json.loads(response.content)
 		self.assertEquals(len(Message.objects.all()), 2)
