@@ -140,11 +140,57 @@ class UserCreateView(CreateView):
 		self.form = UserCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-class ProfileRestView(RestView):
-	def __init__(self, *args, **kwargs):
-		self.model = Profile
-		self.form = ProfileForm
-		super(self.__class__, self).__init__(*args, **kwargs)
+class ProfileRestView(View):
+
+	def get(self, request, *args, **kwargs):
+		try:
+			obj = Profile.objects.get(user=kwargs['pk'])
+			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
+				content_type='application/json')
+		except Profile.DoesNotExist:
+			response = {}
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
+			return HttpResponseBadRequest(json.dumps(response))
+
+	def put(self, request, *args, **kwargs):
+		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+		response = {}
+		try:
+			dbObj = Profile.objects.get(user=kwargs['pk'])
+
+			objForm = ProfileForm(rdata, instance=dbObj)
+
+			if not objForm.is_valid():
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % str(rdata)
+			else:
+				objForm.save()
+				response['id'] = objForm.data['id']
+				response[API_RESULT] = API_SUCCESS
+				return HttpResponse(json.dumps(response))
+
+		except Profile.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
+		return HttpResponseBadRequest(json.dumps(response))
+
+	def delete(self, request, *args, **kwargs):
+		response = {}
+		try:
+			dbObj = Profile.objects.get(user=kwargs['pk'])
+			dbObj.delete()
+			response['id'] = kwargs['pk']
+			response[API_RESULT] = API_SUCCESS
+		except Profile.DoesNotExist:
+			response = {}
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
+			return HttpResponseBadRequest(json.dumps(response))
+		return HttpResponse(json.dumps(response))
+
+	def post(self, request, *args, **kwargs):
+		return self.invalidRequest()
 
 class ProfileCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
@@ -198,6 +244,28 @@ class MessageCreateView(CreateView):
 		self.form = MessageForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
+	def post(self, request, *args, **kwargs):
+		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+		response = {}
+		try:
+			msgForm = self.form(rdata)
+			conversation = Conversation.objects.get(pk=kwargs['cpk'])
+			if not msgForm.is_valid():
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), msgForm.errors)
+			else:
+				obj = msgForm.save()
+				conversation.messages.add(obj)
+				conversation.save()
+				response['id'] = obj.pk
+				response[API_RESULT] = API_SUCCESS
+				return HttpResponse(json.dumps(response))
+
+		except self.model.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = ' - '.join([API_BAD_PK % (kwargs['pk'],
+				self.model.__name__), (API_BAD_PK % (kwargs['cpk']))])
+		return HttpResponseBadRequest(json.dumps(response))
 
 def application_index(request):
 	return render_to_response('index.html', {

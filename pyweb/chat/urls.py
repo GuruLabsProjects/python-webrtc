@@ -4,18 +4,25 @@ from .views import UserCreateView, UserRestView, MessageCreateView, MessageRestV
 	ConversationCreateView, ConversationRestView, ProfileCreateView, ProfileRestView
 
 api_urlpatterns = patterns('',
-	# Message REST URLs
-	url(r'^message/$', MessageCreateView.as_view(), name='message-create'),
-	url(r'^message/(?P<pk>\w+)/$', MessageRestView.as_view(), name='message-rest'),
 	# Conversation REST URLs
     url(r'^conversation/$', ConversationCreateView.as_view(), name='conversation-create'),
-	url(r'^conversation/(?P<pk>\w+)/$', ConversationRestView.as_view(), name='conversation-rest'),
+	url(r'^conversation/(?P<pk>\w+)/$', ConversationRestView.as_view(),
+		name='conversation-rest'),
+
+	# Message REST URLs
+	url(r'^conversation/(?P<cpk>\w+)/message/$', MessageCreateView.as_view(),
+		name='message-create'),
+	url(r'^conversation/(?P<cpk>\w+)/message/(?P<pk>\w+)/$', MessageRestView.as_view(),
+		name='message-rest'),
+
 	# User REST URLs
     url(r'^user/$', UserCreateView.as_view(), name='user-create'),
 	url(r'^user/(?P<pk>\d+)/$', UserRestView.as_view(), name='user-rest'),
+	
 	#Profile REST URLs
-	url(r'^user/(?P<username>\w+)/profile/$', ProfileCreateView.as_view(), name='profile-create'),
-	url(r'^user/(?P<username>\w+)/profile/(?P<pk>\d+)/$', ProfileRestView.as_view(), name='profile-rest')
+	url(r'^user/(?P<pk>\w+)/profile/$', ProfileCreateView.as_view(),
+		name='profile-create'),
+	url(r'^user/(?P<pk>\w+)/profile/$', ProfileRestView.as_view(), name='profile-rest')
 )
 
 urlpatterns = patterns('chat.views',

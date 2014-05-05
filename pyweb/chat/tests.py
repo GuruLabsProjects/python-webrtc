@@ -225,7 +225,7 @@ class ProfileViewTests(TestCase):
 
 	def testGet(self):
 		dummyGet = self.factory.get(reverse('chat:api:profile-rest',
-			args=(self.user.username, str(self.profile.pk))))
+			args=(self.user.username, )))
 		response = self.view.get(dummyGet, pk=str(self.profile.pk),
 			username=self.user.username)
 		
@@ -237,7 +237,7 @@ class ProfileViewTests(TestCase):
 
 	def testGetError(self):
 		dummyGet = self.factory.get(reverse('chat:api:profile-rest',
-			args=(self.user.username, str(self.profile.pk+1))))
+			args=(self.user.username, )))
 		response = self.view.get(dummyGet, pk=str(self.profile.pk + 1))
 		
 		profileObj = json.loads(response.content, cls=DateTimeAwareDecoder)
@@ -258,7 +258,7 @@ class ProfileViewTests(TestCase):
 		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
 
 		dummyPut = self.factory.put(reverse('chat:api:profile-rest', 
-			args=(self.user.username, str(self.profile.pk)) ), jsonData)
+			args=(self.user.username, ) ), jsonData)
 
 		response = self.view.put(dummyPut, content_type='application/json',
 			pk=str(self.profile.pk))
@@ -279,7 +279,7 @@ class ProfileViewTests(TestCase):
 		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
 
 		dummyPut = self.factory.put(reverse('chat:api:profile-rest', 
-			args=(self.user.username, str(self.profile.pk + 1)) ), jsonData)
+			args=(self.user.username, ) ), jsonData)
 
 		response = self.view.put(dummyPut, content_type='application/json',
 			pk=str(self.profile.pk + 1))
@@ -293,7 +293,7 @@ class ProfileViewTests(TestCase):
 	def testDeleteSuccess(self):
 		self.assertEquals(len(Profile.objects.all()), 1)
 		dummyDelete = self.factory.delete(reverse('chat:api:profile-rest',
-			args=(self.user.username, str(self.profile.pk))))
+			args=(self.user.username, )))
 		
 		response = self.view.delete(dummyDelete, pk=self.profile.pk)
 
@@ -305,7 +305,7 @@ class ProfileViewTests(TestCase):
 	def testDeleteFailure(self):
 		self.assertEquals(len(Profile.objects.all()), 1)
 		dummyDelete = self.factory.delete(reverse('chat:api:profile-rest',
-			args=(self.user.username, str(self.profile.pk + 1))))
+			args=(self.user.username, )))
 		
 		response = self.view.delete(dummyDelete, pk=self.profile.pk + 1)
 
@@ -382,7 +382,7 @@ class MessageViewTest(TestCase):
 
 	def testGetSuccess(self):
 		dummyGet = self.factory.get(reverse('chat:api:message-rest',
-			args=(self.msg1.id, )))
+			args=(self.conversation.pk, self.msg1.id, )))
 		response = self.view.get(dummyGet, pk=self.msg1.id)
 
 		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
@@ -395,7 +395,7 @@ class MessageViewTest(TestCase):
 
 	def testGetFail(self):
 		dummyGet = self.factory.get(reverse('chat:api:message-rest',
-			args=('bogusmessageid', )))
+			args=(self.conversation.pk, 'bogusmessageid', )))
 		response = self.view.get(dummyGet, pk='bogusmessageid')
 
 		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
@@ -408,7 +408,7 @@ class MessageViewTest(TestCase):
 	def testDeleteSuccess(self):
 		self.assertEquals(len(Message.objects.all()), 2)
 		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
-			args=(self.msg1.id, )))
+			args=(self.conversation.pk, self.msg1.id, )))
 		
 		response = self.view.delete(dummyDelete, pk=self.msg1.id)
 
@@ -420,7 +420,7 @@ class MessageViewTest(TestCase):
 	def testDeleteFailure(self):
 		self.assertEquals(len(Message.objects.all()), 2)
 		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
-			args=('bogusmessageid', )))
+			args=(self.conversation.pk, 'bogusmessageid', )))
 		
 		response = self.view.delete(dummyDelete, pk='bogusmessageid')
 
@@ -437,7 +437,7 @@ class MessageViewTest(TestCase):
 		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
 
 		dummyPut = self.factory.put(reverse('chat:api:message-rest', args=(
-			str(self.msg1.pk), ) ), jsonData)
+			self.conversation.pk, self.msg1.pk, ) ), jsonData)
 		response = self.view.put(dummyPut, content_type='application/json', pk=str(self.msg1.pk))
 
 		self.assertTrue(response.status_code == 400)
@@ -449,16 +449,19 @@ class MessageViewTest(TestCase):
 		
 		count = len(Message.objects.all())
 		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
-		dummyPost = self.factory.post(reverse('chat:api:message-create'), data=jsonData,
+
+		dummyPost = self.factory.post(reverse('chat:api:message-create', args=(self.conversation.pk, )), data=jsonData,
 			content_type='application/json')
 
-		response = self.createView.post(dummyPost, content_type='application/json')
+		response = self.createView.post(dummyPost, content_type='application/json', cpk=self.conversation.pk)
 
 		rdata = json.loads(response.content)
 
 		self.assertEquals(count + 1, len(Message.objects.all()))
 		try:
 			newMessageObj = Message.objects.get(pk=rdata['id'])
+			self.assertTrue(newMessageObj in Conversation.objects.get(
+				pk=self.conversation.pk).messages.all())
 		except Message.DoesNotExist:
 			self.assertTrue(false, "error with message post")
 		self.assertTrue(Message.objects.get(pk=rdata['id']).text == msg.text)
@@ -470,10 +473,10 @@ class MessageViewTest(TestCase):
 		
 		count = len(Message.objects.all())
 		jsonData = json.dumps(messageDict, cls=DateTimeAwareEncoder)
-		dummyPost = self.factory.post(reverse('chat:api:message-create'), data=jsonData,
+		dummyPost = self.factory.post(reverse('chat:api:message-create', args=(self.conversation.pk, )), data=jsonData,
 			content_type='application/json')
 
-		response = self.createView.post(dummyPost, content_type='application/json')
+		response = self.createView.post(dummyPost, content_type='application/json', cpk=self.conversation.pk)
 
 		rdata = json.loads(response.content)
 
