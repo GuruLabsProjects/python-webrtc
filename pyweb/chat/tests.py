@@ -48,6 +48,18 @@ class DatabaseTests(TestCase):
 		self.assertEqual(user.username, Profile.objects.get(pk=user.pk).user.username)
 		self.assertEqual(len(Profile.objects.all()), 1)
 
+	def testConversationIds(self):
+		convo = Conversation()
+		convo.save()
+		self.assertFalse((convo.id == '') or (convo.id is None), "Something isn't working"
+			+ " with conversation id generation")
+
+	def testMessageIds(self):
+		msg = Message()
+		msg.save()
+		self.assertFalse((msg.id == '') or (msg.id is None), "Something isn't working"
+			+ " with message id generation")
+
 
 class GenericViewTests(TestCase):
 
@@ -395,21 +407,21 @@ class MessageViewTest(TestCase):
 	def testDeleteSuccess(self):
 		self.assertEquals(len(Message.objects.all()), 2)
 		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
-			args=(self.msg1.message_id, )))
+			args=(self.msg1.id, )))
 		
-		response = self.view.delete(dummyDelete, message_id=self.msg1.message_id)
+		response = self.view.delete(dummyDelete, id=self.msg1.id)
 
 		rdata = json.loads(response.content)
 		self.assertEquals(len(Message.objects.all()), 1)
 		with self.assertRaises(Message.DoesNotExist):
-			Message.objects.get(message_id=rdata['id'])
+			Message.objects.get(id=rdata['id'])
 
 	def testDeleteFailure(self):
 		self.assertEquals(len(Message.objects.all()), 2)
 		dummyDelete = self.factory.delete(reverse('chat:api:message-rest',
 			args=('bogusmessageid', )))
 		
-		response = self.view.delete(dummyDelete, message_id='bogusmessageid')
+		response = self.view.delete(dummyDelete, id='bogusmessageid')
 
 		rdata = json.loads(response.content)
 		self.assertEquals(len(Message.objects.all()), 2)
@@ -431,7 +443,7 @@ class MessageViewTest(TestCase):
 
 	def testPostSuccess(self):
 		msg = Message(sender=self.user, text='new message')
-		msg.message_id = 'uniqueuniqueunique'
+		msg.id = 'uniqueuniqueunique'
 		messageDict = model_to_dict(msg)
 		
 		count = len(Message.objects.all())
@@ -445,14 +457,14 @@ class MessageViewTest(TestCase):
 		
 		self.assertEquals(count + 1, len(Message.objects.all()))
 		try:
-			newMessageObj = Message.objects.get(pk=rdata['message_id'])
+			newMessageObj = Message.objects.get(pk=rdata['id'])
 		except Message.DoesNotExist:
 			self.assertTrue(false, "error with message post")
-		self.assertTrue(Message.objects.get(pk=rdata['message_id']).text == msg.text)
+		self.assertTrue(Message.objects.get(pk=rdata['id']).text == msg.text)
 
 	def testPostFailure(self):
 		msg = Message(sender=self.user, text='new message')
-		msg.message_id = self.msg1.message_id
+		msg.id = self.msg1.id
 		messageDict = model_to_dict(msg)
 		
 		count = len(Message.objects.all())
@@ -488,7 +500,7 @@ class ConversationViewTests(TestCase):
 		self.msg2 = Message(sender=self.user, text="heres the second message")
 		self.msg2.save()
 		
-		self.conversation = Conversation()
+		self.conversation = Conversation(id='atestidagain')
 		self.conversation.save()
 		self.conversation.participants.add(self.user)
 		self.conversation.messages.add(self.msg1)
@@ -498,26 +510,26 @@ class ConversationViewTests(TestCase):
 		self.createView = ConversationCreateView()
 
 	def testGetSuccess(self):
-		dummyGet = self.factory.get(reverse('chat:api:conversation-rest', args=str(self.conversation.pk)))
-		response = self.view.get(dummyGet, pk=str(self.conversation.pk))
+		dummyGet = self.factory.get(reverse('chat:api:conversation-rest', args=(self.conversation.id, )))
+		response = self.view.get(dummyGet, pk=str(self.conversation.id))
 
 		msgs = json.loads(response.content, cls=DateTimeAwareDecoder)
 
-		dbmsgs = Conversation.objects.get(pk=self.conversation.pk).messages.all()
+		dbmsgs = Conversation.objects.get(pk=self.conversation.id).messages.all()
 
 		self.assertEquals(len(msgs), len(dbmsgs))
 
 		for msg in msgs:
 			foundIt = False
 			for dbmsg in dbmsgs:
-				if msg['id'] == dbmsg.pk:
+				if msg['id'] == dbmsg.id:
 					if msg['text'] is dbmsg.text:
 						foundIt = True
 						break
 			self.assertFalse(foundIt, "%s not found in %s" % (msg, str(dbmsgs)))
 
 	def testPostSuccess(self):
-		convo = Conversation()
+		convo = Conversation(id='conversationidsdontwork')
 		conversationDict = model_to_dict(convo)
 		
 		count = len(Conversation.objects.all())
@@ -537,7 +549,7 @@ class ConversationViewTests(TestCase):
 
 	def testPut(self):
 		#this should always fail
-		convo = Conversation()
+		convo = Conversation(id='anothertestid')
 		convo.save()
 		convo.participants.add(self.user)
 		
@@ -558,10 +570,10 @@ class ConversationViewTests(TestCase):
 
 	def testDelete(self):
 		#this should always fail
-		dummyPut = self.factory.put(reverse('chat:api:message-rest',
-			args=(self.conversation.pk, ) ))
+		dummyPut = self.factory.delete(reverse('chat:api:conversation-rest',
+			args=(self.conversation.id, ) ))
 		response = self.view.delete(dummyPut, 
-			content_type='application/json', pk=str(self.conversation.pk))
+			content_type='application/json', pk=str(self.conversation.id))
 
 		self.assertTrue(response.status_code == 400)
 
