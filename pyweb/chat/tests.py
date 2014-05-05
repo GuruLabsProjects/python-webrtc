@@ -559,15 +559,13 @@ class ConversationViewTests(TestCase):
 
 		dummyPut = self.factory.put(reverse('chat:api:conversation-rest', args=(
 			str(convo.pk), ) ), jsonData)
-		response = self.view.put(dummyPut, content_type='application/json', pk=str(convo.pk))
-		
+		response = self.view.put(dummyPut, content_type='application/json',
+			pk=str(convo.pk))
+
 		rdata = json.loads(response.content)
 
-		self.assertTrue(response.status_code == 200)
-		self.assertEquals(len(Conversation.objects.get(pk=rdata['id']).participants.all()), 1)
-		self.assertEquals(Conversation.objects.get(pk=rdata['id']).participants.all()[0].pk, self.user.pk)
-		self.assertEquals(Conversation.objects.get(pk=rdata['id']).participants.all()[0].username, self.user.username)
-		self.assertTrue(Conversation.objects.get(pk=rdata['id']).participants.all()[0].username == self.user.username)
+		self.assertTrue(rdata[API_RESULT], API_FAIL)
+		self.assertTrue(response.status_code == 400)
 
 	def testDelete(self):
 		#this should always fail

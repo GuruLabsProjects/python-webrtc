@@ -1,4 +1,4 @@
-import uuid, json, logging, datetime
+import uuid, json, logging, datetime, traceback
 
 from django.shortcuts import render, render_to_response
 
@@ -32,12 +32,9 @@ API_BAD_PK = "id %s does not exist (%s)"
 class BaseView(View):
 	def invalidRequest(self):
 		response = {}
-		try:
-			raise Exception
-		except Exception as e:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = str(e)
-			return HttpResponseBadRequest(response)
+		response[API_RESULT] = API_FAIL
+		response[API_ERROR] = str(traceback.format_exc())
+		return HttpResponseBadRequest(json.dumps(response))
 
 class CreateView(BaseView):
 	def get(self, request, *args, **kwargs):
@@ -140,7 +137,7 @@ class UserCreateView(CreateView):
 		self.form = UserCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-class ProfileRestView(View):
+class ProfileRestView(BaseView):
 
 	def get(self, request, *args, **kwargs):
 		try:
@@ -198,7 +195,7 @@ class ProfileCreateView(CreateView):
 		self.form = ProfileCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
-class ConversationRestView(RestView):
+class ConversationRestView(BaseView):
 	def __init__(self, *args, **kwargs):
 		self.model = Conversation
 		self.form = ConversationForm
@@ -219,6 +216,9 @@ class ConversationRestView(RestView):
 			response[API_RESULT] = API_FAIL
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
+
+	def put(self, request, *args, **kwargs):
+		return self.invalidRequest()
 
 	def delete(self, request, *args, **kwargs):
 		return self.invalidRequest()
