@@ -179,8 +179,6 @@ class ConversationRestView(RestView):
 			response[API_ERROR] = API_BAD_PK % (kwargs[self.pkString], self.model.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 
-	
-
 	def delete(self, request, *args, **kwargs):
 		return self.invalidRequest()
 
@@ -195,7 +193,7 @@ class MessageRestView(RestView):
 	def __init__(self, *args, **kwargs):
 		self.model = Message
 		self.form = MessageForm
-		self.pkString = 'message_id'
+		self.pkString = 'id'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 	def put(self, request, *args, **kwargs):
@@ -205,7 +203,7 @@ class MessageCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
 		self.model = Message
 		self.form = MessageForm
-		self.pkString = 'message_id'
+		self.pkString = 'id'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 
