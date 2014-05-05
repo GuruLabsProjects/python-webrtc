@@ -1,7 +1,7 @@
 import uuid, datetime, posixpath, logging, json
 
 from django.utils import timezone
-from django.db import models, IntegrityError
+from django.db import models, transaction, IntegrityError
 
 from django.core import serializers
 from django.core.urlresolvers import reverse
@@ -55,7 +55,8 @@ class DatabaseTests(TestCase):
 			+ " with conversation id generation")
 
 	def testMessageIds(self):
-		msg = Message()
+		user = User.objects.create(username=username)
+		msg = Message(sender=user, text='heres some text')
 		msg.save()
 		self.assertFalse((msg.id == '') or (msg.id is None), "Something isn't working"
 			+ " with message id generation")
@@ -454,7 +455,7 @@ class MessageViewTest(TestCase):
 		response = self.createView.post(dummyPost, content_type='application/json')
 
 		rdata = json.loads(response.content)
-		
+
 		self.assertEquals(count + 1, len(Message.objects.all()))
 		try:
 			newMessageObj = Message.objects.get(pk=rdata['id'])
@@ -475,11 +476,9 @@ class MessageViewTest(TestCase):
 		response = self.createView.post(dummyPost, content_type='application/json')
 
 		rdata = json.loads(response.content)
-		
-		self.assertEquals(count, len(Message.objects.all()))
+
 		self.assertEquals(rdata[API_RESULT], API_FAIL)
-
-
+		self.assertEquals(count, len(Message.objects.all()))
 
 class ConversationViewTests(TestCase):
 	def __init__(self, *args, **kwargs):
@@ -500,7 +499,7 @@ class ConversationViewTests(TestCase):
 		self.msg2 = Message(sender=self.user, text="heres the second message")
 		self.msg2.save()
 		
-		self.conversation = Conversation(id='atestidagain')
+		self.conversation = Conversation()
 		self.conversation.save()
 		self.conversation.participants.add(self.user)
 		self.conversation.messages.add(self.msg1)
@@ -529,9 +528,8 @@ class ConversationViewTests(TestCase):
 			self.assertFalse(foundIt, "%s not found in %s" % (msg, str(dbmsgs)))
 
 	def testPostSuccess(self):
-		convo = Conversation(id='conversationidsdontwork')
+		convo = Conversation()
 		conversationDict = model_to_dict(convo)
-		
 		count = len(Conversation.objects.all())
 		jsonData = json.dumps(conversationDict, cls=DateTimeAwareEncoder)
 		dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
@@ -540,7 +538,7 @@ class ConversationViewTests(TestCase):
 		response = self.createView.post(dummyPost, content_type='application/json')
 
 		rdata = json.loads(response.content)
-		
+
 		self.assertEquals(count + 1, len(Conversation.objects.all()))
 		try:
 			newConvoObj = Conversation.objects.get(pk=rdata['id'])
@@ -549,7 +547,7 @@ class ConversationViewTests(TestCase):
 
 	def testPut(self):
 		#this should always fail
-		convo = Conversation(id='anothertestid')
+		convo = Conversation()
 		convo.save()
 		convo.participants.add(self.user)
 		

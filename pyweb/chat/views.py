@@ -16,7 +16,8 @@ from django.forms.models import model_to_dict
 from .util import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
-from .forms import UserForm, ProfileForm, MessageForm, ConversationForm
+from .forms import (UserForm, ProfileForm, MessageForm, ConversationForm,
+	UserCreateForm, ProfileCreateForm, MessageCreateForm, ConversationCreateForm)
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class CreateView(BaseView):
 				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
 			else:
 				obj = objForm.save()
-				response[self.pkString] = obj.pk
+				response['id'] = obj.pk
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
 
@@ -131,35 +132,30 @@ class UserRestView(RestView):
 	def __init__(self, *args, **kwargs):
 		self.model = User
 		self.form = UserForm
-		self.pkString = 'pk'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 class UserCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
 		self.model = User
-		self.form = UserForm
-		self.pkString = 'id'
+		self.form = UserCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 class ProfileRestView(RestView):
 	def __init__(self, *args, **kwargs):
 		self.model = Profile
 		self.form = ProfileForm
-		self.pkString = 'pk'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 class ProfileCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
 		self.model = Profile
-		self.form = ProfileForm
-		self.pkString = 'id'
+		self.form = ProfileCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 class ConversationRestView(RestView):
 	def __init__(self, *args, **kwargs):
 		self.model = Conversation
 		self.form = ConversationForm
-		self.pkString = 'pk'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 	def get(self, *args, **kwargs):
@@ -184,15 +180,13 @@ class ConversationRestView(RestView):
 class ConversationCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
 		self.model = Conversation
-		self.form = ConversationForm
-		self.pkString = 'id'
+		self.form = ConversationCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 class MessageRestView(RestView):
 	def __init__(self, *args, **kwargs):
 		self.model = Message
 		self.form = MessageForm
-		self.pkString = 'id'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 	def put(self, request, *args, **kwargs):
@@ -202,7 +196,6 @@ class MessageCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
 		self.model = Message
 		self.form = MessageForm
-		self.pkString = 'id'
 		super(self.__class__, self).__init__(*args, **kwargs)
 
 
