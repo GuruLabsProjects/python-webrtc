@@ -16,7 +16,7 @@ from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 from .models import Profile, Message, Conversation
 from .forms import ProfileForm, UserForm, MessageForm, ConversationForm
 from .views import (UserCreateView, UserAuthenticateView, UserRestView, ProfileRestView,
-	ProfileCreateView, MessageRestView, MessageCreateView, ConversationRestView,
+	MessageRestView, MessageCreateView, ConversationRestView,
 	ConversationCreateView, API_RESULT, API_SUCCESS, API_FAIL, API_ERROR)
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ def login(client, username='guru', password='work'):
 		raise Exception("Error logging in")
 	if response.status_code != 200:
 		raise Exception("Error logging in")
+	return rdata
 
 
 class DatabaseTests(TestCase):
@@ -173,22 +174,8 @@ class UserViewTests(TestCase):
 		self.assertTrue(rdata[API_ERROR] is not None)
 
 	def testUserAuthenticate(self):
-		#tests user authentication
-		u = User.objects.create_user(username='guru')
-		u.set_password('work')
-		u.save()
-
-		userDict = model_to_dict(u)
-		userDict['password'] = 'work'
-
-		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
-
-		response = self.client.post(reverse('chat:api:user-authenticate'), data=jsonData,
-			content_type='application/json')
-		rdata = json.loads(response.content)
-
-		self.assertEqual(rdata[API_RESULT], API_SUCCESS)
-		self.assertEqual(response.status_code, 200)
+		rdata = login(self.client)
+		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 
 
 	def testUserRegisterSuccess(self):
@@ -299,28 +286,49 @@ class ProfileViewTests(TestCase):
 		self.user.save()
 		self.profile.save()
 		self.view = ProfileRestView()
-		self.createView = ProfileCreateView()
 
-	def testGet(self):
+	def testGetSuccess(self):
 		login(self.client)
-		# dummyGet = self.factory.get(reverse('chat:api:profile-rest',
-		# 	args=(self.user.username, )))
-		# response = self.view.get(dummyGet, pk=str(self.profile.pk),
-		# 	username=self.user.username)
-
-		print reverse('chat:api:profile-rest',
-			args=(self.user.pk, ))
 
 		response = self.client.get(reverse('chat:api:profile-rest',
 			args=(self.user.pk, )), content_type='application/json')
-		
-		print response.content
-
+	
 		response_user = json.loads(response.content, cls=DateTimeAwareDecoder)
+
 		userForm = ProfileForm(response_user,
 			instance=Profile.objects.get(pk=response_user['id']))
 		#ensure the data we got is valid
 		self.assertEqual(userForm.is_valid(), True)
+
+	def testGetInvalidInput(self):
+		login(self.client)
+
+		response = self.client.get(reverse('chat:api:profile-rest',
+			args=(invalidPk, )), content_type='application/json')
+	
+		rdata = json.loads(response.content, cls=DateTimeAwareDecoder)
+
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		errMsg = "Invalid response - got '%s' when I should have got '%s' " % (rdata[API_ERROR],
+			 "id 9999 does not exist (Profile)", )
+		self.assertTrue(rdata[API_ERROR] ==  
+			"id 9999 does not exist (Profile)", errMsg)
+
+	# def testGetNotLoggedIn(self):
+	# 	# login(self.client)
+	# 	# self.user.save()
+
+	# 	response = self.client.get(reverse('chat:api:profile-rest',
+	# 		args=(invalidPk, )), content_type='application/json')
+	
+	# 	rdata = json.loads(response.content, cls=DateTimeAwareDecoder)
+
+	# 	self.assertEquals(rdata[API_RESULT], API_FAIL)
+	# 	errMsg = "Invalid response - got '%s' when I should have got '%s' " % (rdata[API_ERROR],
+	# 		 "id 9999 does not exist (Profile)", )
+	# 	self.assertTrue(rdata[API_ERROR] ==  
+	# 		"id 9999 does not exist (Profile)", errMsg)
+
 
 	# def testGetError(self):
 	# 	login(self.client)
@@ -336,35 +344,8 @@ class ProfileViewTests(TestCase):
 
 	# 	self.assertEqual(profileForm.is_valid(), False)
 
-	def testLoggedIn(self):
-		# dummyGet = self.factory.get(reverse('chat:api:login-test'))
-		# response = self.view.get(dummyGet, pk=str(self.profile.pk),
-		# 	username=self.user.username)
-		# u = User.objects.create_user(username='guru')
-		# u.set_password('work')
-		# u.save()
-
-		# userDict = model_to_dict(u)
-		# userDict['password'] = 'work'
-
-		# jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
-
-		# response = self.client.post(reverse('chat:api:user-authenticate'), data=jsonData,
-		# 	content_type='application/json')
-		# rdata = json.loads(response.content)
-
-		# self.assertEqual(rdata[API_RESULT], API_SUCCESS)
-		# self.assertEqual(response.status_code, 200)
-
-		# self.client.username = 'guru'
-		# self.client.password = 'work'
-		# self.client.user = u
-
-		# res = self.client.login(username='guru', password='work')
-
-		# self.assertTrue(res, "Failed to login to client")
+	def testLoggedInGetProfile(self):
 		login(self.client)
-
 
 		response = self.client.get(reverse('chat:api:login-test', args=(self.user.pk, )),
 			content_type='application/json')
@@ -372,7 +353,7 @@ class ProfileViewTests(TestCase):
 		response_user = json.loads(response.content, cls=DateTimeAwareDecoder)
 		userForm = ProfileForm(response_user,
 			instance=Profile.objects.get(pk=response_user['id']))
-		#ensure the data we got is valid
+
 		self.assertEqual(userForm.is_valid(), True)
 
 	def testPutSuccess(self):
@@ -439,44 +420,6 @@ class ProfileViewTests(TestCase):
 		rdata = json.loads(response.content)
 		self.assertEquals(rdata[API_RESULT], API_FAIL)
 		self.assertEquals(len(Profile.objects.all()), 1)
-
-	def testPostSuccess(self):
-		user = User.objects.create_user(username='another_user')
-		user.save()
-		self.profile.user = user
-		profileDict = model_to_dict(self.profile)
-
-		count = len(Profile.objects.all())
-		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
-		dummyPost = self.factory.post(reverse('chat:api:profile-create', 
-			args=(self.user.username, )), data=jsonData,
-			content_type='application/json')
-
-		response = self.createView.post(dummyPost, content_type='application/json')
-		rdata = json.loads(response.content)
-		self.assertEquals(count + 1, len(Profile.objects.all()))
-		try:
-			newProfileObj = Profile.objects.get(pk=rdata['id'])
-		except Profile.DoesNotExist:
-			self.assertTrue(false, "error with profile post")
-
-	def testPostFailure(self):
-		user = User.objects.create_user(username='another_user')
-		user.save()
-		user.pk = invalidPk
-		self.profile.user = user
-		profileDict = model_to_dict(self.profile)
-
-		count = len(Profile.objects.all())
-		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
-		dummyPost = self.factory.post(reverse('chat:api:profile-create', 
-			args=(self.user.username, )), data=jsonData,
-			content_type='application/json')
-
-		response = self.createView.post(dummyPost, content_type='application/json')
-		rdata = json.loads(response.content)
-		self.assertEquals(count, len(Profile.objects.all()))
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
 
 
 class MessageViewTest(TestCase):

@@ -22,7 +22,7 @@ from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import (UserForm, ProfileForm, MessageForm, ConversationForm,
-	UserCreateForm, ProfileCreateForm, MessageCreateForm, ConversationCreateForm)
+	UserCreateForm, MessageCreateForm, ConversationCreateForm)
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ API_BAD_PK = "id %s does not exist (%s)"
 
 class BaseView(View):
 	def invalidRequest(self, error=''):
+		error = self.__class__.__name__
 		response = {}
 		response[API_RESULT] = API_FAIL
 		response[API_ERROR] = ' : '.join([str(traceback.format_exc()), error])
@@ -202,11 +203,15 @@ class UserCreateView(CreateView):
 		return HttpResponseBadRequest(json.dumps(response))
 
 
+
+
 class ProfileRestView(BaseView):
 
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
 		try:
+			# for prof in Profile.objects.all():
+			# 	print prof.user.pk
 			obj = Profile.objects.get(user=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
 				content_type='application/json')
@@ -265,12 +270,6 @@ class LoggedInTestView(ProfileRestView):
 	def get(self, request, *args, **kwargs):
 		print request.user
 		super(self.__class__, self).get(request, *args, **kwargs)
-
-class ProfileCreateView(CreateView):
-	def __init__(self, *args, **kwargs):
-		self.model = Profile
-		self.form = ProfileCreateForm
-		super(self.__class__, self).__init__(*args, **kwargs)
 
 class ConversationRestView(BaseView):
 	def __init__(self, *args, **kwargs):

@@ -3,11 +3,6 @@ from django.forms import ModelForm, CharField
 from django.contrib.auth.models import User
 from .models import Profile, Conversation, Message
 
-class ProfileCreateForm(ModelForm):
-	class Meta:
-		model = Profile
-		fields = ('id', 'user',)
-
 class ProfileForm(ModelForm):
 	class Meta:
 		model = Profile

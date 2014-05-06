@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, url, include
 
 from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCreateView, \
-	MessageRestView, ConversationCreateView, ConversationRestView, ProfileCreateView, \
+	MessageRestView, ConversationCreateView, ConversationRestView, \
 	ProfileRestView, LoggedInTestView
 	
 
@@ -26,9 +26,9 @@ api_urlpatterns = patterns('',
 	url(r'^login/$', UserAuthenticateView.as_view(), name='user-authenticate'),
 
 	# Profile REST URLs
-	url(r'^user/(?P<pk>\w+)/profile/$', ProfileCreateView.as_view(),
-		name='profile-create'),
 	url(r'^user/(?P<pk>\w+)/profile/$', ProfileRestView.as_view(), name='profile-rest'),
+	# url(r'^user/(?P<pk>\w+)/profile/create$', ProfileCreateView.as_view(),
+	# 	name='profile-create'),
 
 	url(r'^test/(?P<pk>\d+)$', ProfileRestView.as_view(), name='login-test')
 )
