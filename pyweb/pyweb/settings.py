@@ -13,6 +13,8 @@ import os
 PROJECT_DIR = os.path.dirname(__file__)
 BASE_DIR = os.path.dirname(PROJECT_DIR)
 
+#URL for login page
+LOGIN_URL = '/login/'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
@@ -26,7 +28,6 @@ DEBUG = True
 TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -91,6 +92,7 @@ STATICFILES_DIRS = (
 TEMPLATE_DIRS = (
 	os.path.join(PROJECT_DIR, 'templates'),
 )
+
 
 # Logging Configuration
 if DEBUG:
