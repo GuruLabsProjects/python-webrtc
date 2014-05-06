@@ -35,11 +35,24 @@ API_INVALID_DATA = "invalid data: (%s) - errors:(%s)"
 API_BAD_PK = "id %s does not exist (%s)"
 
 class BaseView(View):
-	def invalidRequest(self, error=''):
-		error = self.__class__.__name__
+	def getFailResponse(self, error=None):
 		response = {}
 		response[API_RESULT] = API_FAIL
-		response[API_ERROR] = ' : '.join([str(traceback.format_exc()), error])
+		if error:
+			response[API_ERROR] = error
+		return response
+
+	def getSuccessResponse(self, **kwargs):
+		response = {}
+		response[API_RESULT] = API_SUCCESS
+		for key, value in kwargs.iteritems():
+			response[str(key)] = value
+		return response
+
+	def invalidRequest(self, error=''):
+		error = self.__class__.__name__
+		response = self.getFailResponse(str(' : '.join([str(traceback.format_exc()),
+			error])))
 		return HttpResponseBadRequest(json.dumps(response))
 
 	def get(self, request, *args, **kwargs):
@@ -64,34 +77,33 @@ class UserRestView(BaseView):
 			obj = User.objects.get(pk=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
 				content_type='application/json')
+
 		except User.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			return HttpResponseNotFound(json.dumps(response))
+			return HttpResponseNotFound(json.dumps(self.getFailResponse()))
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
-		response = {}
 		try:
 			# ensure the requesting user is logged in and requesting the right user obj
 			if str(request.user.pk) == str(kwargs['pk']):
 
 				user = User.objects.get(pk=kwargs['pk'])
 				userForm = UserForm(rdata, instance=user)
+
 				if userForm.is_valid():
 					userForm.save()
-					response['id'] = userForm.data['id']
-					response[API_RESULT] = API_SUCCESS
+					response = self.getSuccessResponse(id=userForm.data['id'])
 					return HttpResponse(json.dumps(response))
+
 				else:
 					response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
-			response[API_RESULT] = API_FAIL
+
+			response = self.getFailResponse()
 			return HttpResponseNotFound(json.dumps(response))
 
 		except User.DoesNotExist:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], User.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
 		return HttpResponseBadRequest(json.dumps(response))
 
 	@method_decorator(login_required)
@@ -102,16 +114,15 @@ class UserRestView(BaseView):
 			if str(request.user.pk) == str(kwargs['pk']):	
 				user = User.objects.get(pk=kwargs['pk'])
 				user.delete()
-				response['id'] = kwargs['pk']
-				response[API_RESULT] = API_SUCCESS
+				response = self.getSuccessResponse(id=kwargs['pk'])
 				return HttpResponse(json.dumps(response))
-			response[API_RESULT] = API_FAIL
+
+			response = self.getFailResponse()
 			# response[API_ERROR] = "%s vs %s" % (request.user.pk, kwargs['pk'], )
 			return HttpResponseNotFound(json.dumps(response))
+
 		except User.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], User.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
 			return HttpResponseBadRequest(json.dumps(response))
 
 class UserAuthenticateView(BaseView):
@@ -132,7 +143,7 @@ class UserAuthenticateView(BaseView):
 				if user:
 					if user.is_active:
 						login(request, user)
-						response[API_RESULT] = API_SUCCESS
+						response = self.getSuccessResponse()
 						return HttpResponse(json.dumps(response))
 					else:
 						raise self.ValidationError("User account %s is disabled" % \
@@ -140,15 +151,16 @@ class UserAuthenticateView(BaseView):
 				else:
 					raise ValidationError("Invalid username and/or password")
 			else:
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), authForm.errors)
+				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
+					authForm.errors))
+
 		except User.DoesNotExist:
-			response[API_RESULT] = API_FAIL
+			response = self.getFailResponse()
 			return HttpResponseNotFound(json.dumps(response))
 			# response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+
 		except ValidationError as err:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = err
+			response = self.getFailResponse(err)
 		return HttpResponseBadRequest(json.dumps(response))
 
 
@@ -164,17 +176,15 @@ class UserCreateView(BaseView):
 				user = userForm.save()
 				profile = Profile(user=user)
 				profile.save()
-				response['id'] = user.pk
-				response[API_RESULT] = API_SUCCESS
+				response = self.getSuccessResponse(id=user.pk)
 				return HttpResponse(json.dumps(response))
 
 			else:
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
+				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
+					userForm.errors))
 
 		except User.DoesNotExist:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], User.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
 		return HttpResponseBadRequest(json.dumps(response))
 
 class ProfileRestView(BaseView):
@@ -187,9 +197,7 @@ class ProfileRestView(BaseView):
 				content_type='application/json')
 
 		except Profile.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Profile.__name__))
 			return HttpResponseBadRequest(json.dumps(response))
 
 	@method_decorator(login_required)
@@ -199,19 +207,20 @@ class ProfileRestView(BaseView):
 		try:
 			profile = Profile.objects.get(pk=rdata['id'])
 			profileForm = ProfileForm(rdata, instance=profile)
+
 			# ensure the user is updating him/herself only 
 			if profileForm.is_valid() and profile.user.pk == rdata['user']:
+
 				profileForm.save()
-				response['id'] = profileForm.data['id']
-				response[API_RESULT] = API_SUCCESS
+				response = self.getSuccessResponse(id=profileForm.data['id'])
 				return HttpResponse(json.dumps(response))
+
 			else:
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), profileForm.errors)
+				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
+					profileForm.errors))
 
 		except Profile.DoesNotExist:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Profile.__name__))
 		return HttpResponseBadRequest(json.dumps(response))
 
 class ConversationRestView(BaseView):
@@ -220,42 +229,44 @@ class ConversationRestView(BaseView):
 	def get(self, request, *args, **kwargs):
 		try:			
 			obj = Conversation.objects.get(pk=kwargs['pk'])
+
 			if request.user in obj.participants.all():
+
 				msgs = list(obj.messages.all())
 				response = []
+
 				for msg in msgs:
 					response.append({'id' : msg.pk, 'text' : msg.text})
+
 				return HttpResponse(json.dumps(response, cls=DateTimeAwareEncoder),
 					content_type='application/json')
 			else:
-				response = {}
-				response[API_RESULT] = API_FAIL
+				response = self.getFailResponse()
 				# response[API_RESULT] = 'user doesnt belong in that convo'
 				return HttpResponseNotFound(json.dumps(response))
 
 		except Conversation.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Conversation.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
+				Conversation.__name__))
 			return HttpResponseBadRequest(json.dumps(response))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
 		response = {}
 		try:
-			dbObj = Conversation.objects.get(pk=kwargs['pk'])
-			if request.user in dbObj.participants.all():
-				dbObj.delete()
-				response['id'] = kwargs['pk']
-				response[API_RESULT] = API_SUCCESS
+			convoObj = Conversation.objects.get(pk=kwargs['pk'])
+
+			if request.user in convoObj.participants.all():
+				convoObj.delete()
+				response = self.getSuccessResponse(id=kwargs['pk'])
 			else:
-				response[API_RESULT] = API_FAIL
+				response = self.getFailResponse()
 				# response[API_RESULT] = 'user doesnt belong in that convo'
 				return HttpResponseNotFound(json.dumps(response))
+
 		except Conversation.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Conversation.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
+				Conversation.__name__))
 			return HttpResponseBadRequest(json.dumps(response))
 		return HttpResponse(json.dumps(response))
 
@@ -267,18 +278,19 @@ class ConversationCreateView(BaseView):
 		response = {}
 		try:
 			convoForm = ConversationCreateForm(rdata)
+
 			if convoForm.is_valid():
 				convo = convoForm.save()
-				response['id'] = convo.pk
-				response[API_RESULT] = API_SUCCESS
+				response = self.getSuccessResponse(id=convo.pk)
 				return HttpResponse(json.dumps(response))
+
 			else:
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), convoForm.errors)
+				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
+					convoForm.errors))
 
 		except Conversation.DoesNotExist:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Conversation.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
+				Conversation.__name__))
 		return HttpResponseBadRequest(json.dumps(response))
 
 class MessageRestView(BaseView):
@@ -287,18 +299,19 @@ class MessageRestView(BaseView):
 	def get(self, request, *args, **kwargs):
 		try:
 			convo = Conversation.objects.get(pk=kwargs['cpk'])
+
 			# ensure requesting user is participant in conversation
 			if request.user in convo.participants.all():
 				msg = convo.messages.get(pk=kwargs['pk'])
+
 				return HttpResponse(json.dumps(model_to_dict(msg),
 					cls=DateTimeAwareEncoder), content_type='application/json')
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = 'message/user doesnt belong'
-			return HttpResponseNotFound(json.dumps(response))				
+
+			response = self.getFailResponse()
+			return HttpResponseNotFound(json.dumps(response))	
+
 		except Message.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
+			response = self.getFailResponse()
 			return HttpResponseBadRequest(json.dumps(response))
 
 	@method_decorator(login_required)
@@ -309,18 +322,16 @@ class MessageRestView(BaseView):
 			# ensure requesting user is participant in conversation
 			if request.user in convo.participants.all():
 				msg = convo.messages.get(pk=kwargs['pk'])
+
 				if(msg.sender == request.user):
 					msg.delete()
-					response['id'] = kwargs['pk']
-					response[API_RESULT] = API_SUCCESS
+					response = self.getSuccessResponse(id=kwargs['pk'])
 					return HttpResponse(json.dumps(response))
-			response = {}
-			response[API_RESULT] = API_FAIL
+
+			response = self.getFailResponse()
 			return HttpResponseNotFound(json.dumps(response))
 		except Message.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Message.__name__)
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Message.__name__))
 			return HttpResponseBadRequest(json.dumps(response))
 
 class MessageCreateView(BaseView):
@@ -333,22 +344,22 @@ class MessageCreateView(BaseView):
 			msgForm = MessageForm(rdata)
 			conversation = Conversation.objects.get(pk=kwargs['cpk'])
 			if not msgForm.is_valid():
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), msgForm.errors)
+				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
+					msgForm.errors))
+
 			elif request.user in conversation.participants.all():
 				obj = msgForm.save()
 				conversation.messages.add(obj)
 				conversation.save()
-				response['id'] = obj.pk
-				response[API_RESULT] = API_SUCCESS
+				response = self.getSuccessResponse(id=obj.pk)
 				return HttpResponse(json.dumps(response))
+
 			else:
-				response[API_RESULT] = API_FAIL
+				response = self.getFailResponse()
 				return HttpResponseNotFound(json.dumps(response))
 		except Message.DoesNotExist:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = ' - '.join([API_BAD_PK % (kwargs['pk'],
-				Message.__name__), (API_BAD_PK % (kwargs['cpk']))])
+			response = self.getFailResponse(' - '.join([API_BAD_PK % (kwargs['pk'],
+				Message.__name__), (API_BAD_PK % (kwargs['cpk']))]))
 		return HttpResponseBadRequest(json.dumps(response))
 
 

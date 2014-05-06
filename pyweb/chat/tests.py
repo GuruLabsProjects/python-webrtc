@@ -226,8 +226,6 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
-		print rdata
-
 		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 		self.assertEquals(count + 1, len(User.objects.all()))
 		self.assertEquals(countProfiles + 1, len(Profile.objects.all()))
