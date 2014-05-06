@@ -189,8 +189,8 @@ class UserViewTests(TestCase):
 		userDict['first_name'] = 'Mr'
 		userDict['last_name'] = 'Guru'
 		userDict['email'] = 'guru@guru.com'
-		userDict['password'] = 'work'
-		userDict['verify_password'] = 'work'
+		userDict['password1'] = 'work'
+		userDict['password2'] = 'work'
 		userDict['email'] = 'guru@gurulabs.com'
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
 
@@ -214,8 +214,8 @@ class UserViewTests(TestCase):
 		userDict['first_name'] = 'Mr'
 		userDict['last_name'] = 'Guru'
 		userDict['email'] = 'guru@guru.com'
-		userDict['password'] = 'work'
-		userDict['verify_password'] = 'work'
+		userDict['password1'] = 'work'
+		userDict['password2'] = 'work'
 
 		count = len(User.objects.all())
 		countProfiles = len(Profile.objects.all())
@@ -225,6 +225,8 @@ class UserViewTests(TestCase):
 			content_type='application/json')
 
 		rdata = json.loads(response.content)
+
+		print rdata
 
 		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 		self.assertEquals(count + 1, len(User.objects.all()))
@@ -245,8 +247,8 @@ class UserViewTests(TestCase):
 		userDict['first_name'] = 'Mr'
 		userDict['last_name'] = 'Guru'
 		userDict['email'] = 'guru@guru.com'
-		userDict['password'] = 'work'
-		userDict['verify_password'] = 'not_work'
+		userDict['password1'] = 'work'
+		userDict['password2'] = 'not_work'
 
 		count = len(User.objects.all())
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
@@ -269,8 +271,8 @@ class UserViewTests(TestCase):
 		userDict['first_name'] = 'Mr'
 		userDict['last_name'] = 'Guru'
 		userDict['email'] = 'guru@guru.com'
-		userDict['password'] = 'work'
-		userDict['verify_password'] = 'work'
+		userDict['password1'] = 'work'
+		userDict['password2'] = 'work'
 
 		count = len(User.objects.all())
 		countProfiles = len(Profile.objects.all())

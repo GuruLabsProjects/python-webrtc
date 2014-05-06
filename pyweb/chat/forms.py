@@ -8,18 +8,6 @@ class ProfileForm(ModelForm):
 		model = Profile
 		fields = ('id', 'user',)
 
-class UserCreateForm(ModelForm):
-	verify_password = CharField(256)
-	class Meta:
-		model = User
-		fields = ('first_name', 'last_name', 'username', 'email', 'password', )
-
-	def clean(self):
-		cleanedData = super(self.__class__, self).clean()
-		if cleanedData.get('password') != cleanedData.get('verify_password'):
-			raise ValidationError("The supplied passwords don't match")
-		return cleanedData
-
 class UserForm(ModelForm):
 	class Meta:
 		model = User

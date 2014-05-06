@@ -12,7 +12,7 @@ from django.template import Context, loader, RequestContext
 from django.utils.decorators import method_decorator
 
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 
@@ -22,7 +22,7 @@ from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import (UserForm, ProfileForm, MessageForm, ConversationForm,
-	UserCreateForm, MessageCreateForm, ConversationCreateForm)
+	MessageCreateForm, ConversationCreateForm)
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ class UserRestView(BaseView):
 	'''
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
+		# do we want to limit this so only the user logged in can get the details?
 		try:
 			obj = User.objects.get(pk=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
@@ -73,7 +74,9 @@ class UserRestView(BaseView):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
+			# ensure the requesting user is logged in and requesting the right user obj
 			if str(request.user.pk) == str(kwargs['pk']):
+
 				user = User.objects.get(pk=kwargs['pk'])
 				userForm = UserForm(rdata, instance=user)
 				if userForm.is_valid():
@@ -95,6 +98,7 @@ class UserRestView(BaseView):
 	def delete(self, request, *args, **kwargs):
 		response = {}
 		try:		
+			# ensure the requesting user is logged in and requesting the right user obj
 			if str(request.user.pk) == str(kwargs['pk']):	
 				user = User.objects.get(pk=kwargs['pk'])
 				user.delete()
@@ -102,7 +106,7 @@ class UserRestView(BaseView):
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = "%s vs %s" % (request.user.pk, kwargs['pk'], )
+			# response[API_ERROR] = "%s vs %s" % (request.user.pk, kwargs['pk'], )
 			return HttpResponseNotFound(json.dumps(response))
 		except User.DoesNotExist:
 			response = {}
@@ -154,17 +158,19 @@ class UserCreateView(BaseView):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
-			userForm = UserCreateForm(rdata)
-			if not userForm.is_valid():
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
-			else:
+			userForm = UserCreationForm(rdata)
+
+			if userForm.is_valid():
 				user = userForm.save()
 				profile = Profile(user=user)
 				profile.save()
 				response['id'] = user.pk
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
+
+			else:
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
 
 		except User.DoesNotExist:
 			response[API_RESULT] = API_FAIL
@@ -179,6 +185,7 @@ class ProfileRestView(BaseView):
 			profile = Profile.objects.get(user=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(profile), cls=DateTimeAwareEncoder),
 				content_type='application/json')
+
 		except Profile.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
@@ -192,7 +199,7 @@ class ProfileRestView(BaseView):
 		try:
 			profile = Profile.objects.get(pk=rdata['id'])
 			profileForm = ProfileForm(rdata, instance=profile)
-
+			# ensure the user is updating him/herself only 
 			if profileForm.is_valid() and profile.user.pk == rdata['user']:
 				profileForm.save()
 				response['id'] = profileForm.data['id']
@@ -260,14 +267,14 @@ class ConversationCreateView(BaseView):
 		response = {}
 		try:
 			convoForm = ConversationCreateForm(rdata)
-			if not convoForm.is_valid():
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), convoForm.errors)
-			else:
+			if convoForm.is_valid():
 				convo = convoForm.save()
 				response['id'] = convo.pk
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
+			else:
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), convoForm.errors)
 
 		except Conversation.DoesNotExist:
 			response[API_RESULT] = API_FAIL
@@ -280,6 +287,7 @@ class MessageRestView(BaseView):
 	def get(self, request, *args, **kwargs):
 		try:
 			convo = Conversation.objects.get(pk=kwargs['cpk'])
+			# ensure requesting user is participant in conversation
 			if request.user in convo.participants.all():
 				msg = convo.messages.get(pk=kwargs['pk'])
 				return HttpResponse(json.dumps(model_to_dict(msg),
@@ -298,16 +306,17 @@ class MessageRestView(BaseView):
 		response = {}
 		try:
 			convo = Conversation.objects.get(pk=kwargs['cpk'])
+			# ensure requesting user is participant in conversation
 			if request.user in convo.participants.all():
 				msg = convo.messages.get(pk=kwargs['pk'])
-				msg.delete()
-				response['id'] = kwargs['pk']
-				response[API_RESULT] = API_SUCCESS
-				return HttpResponse(json.dumps(response))
-			else:
-				response = {}
-				response[API_RESULT] = API_FAIL
-				return HttpResponseNotFound(json.dumps(response))
+				if(msg.sender == request.user):
+					msg.delete()
+					response['id'] = kwargs['pk']
+					response[API_RESULT] = API_SUCCESS
+					return HttpResponse(json.dumps(response))
+			response = {}
+			response[API_RESULT] = API_FAIL
+			return HttpResponseNotFound(json.dumps(response))
 		except Message.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
