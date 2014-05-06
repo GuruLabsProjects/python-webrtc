@@ -15,7 +15,9 @@ from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import ProfileForm, UserForm, MessageForm, ConversationForm
-from .views import *
+from .views import (UserCreateView, UserAuthenticateView, UserRestView, ProfileRestView,
+	ProfileCreateView, MessageRestView, MessageCreateView, ConversationRestView,
+	ConversationCreateView, API_RESULT, API_SUCCESS, API_FAIL, API_ERROR)
 
 logger = logging.getLogger(__name__)
 
@@ -165,17 +167,16 @@ class UserViewTests(TestCase):
 		self.assertEqual(rdata[API_RESULT], API_SUCCESS)
 		self.assertEqual(response.status_code, 200)
 
-	
 
+	def testUserRegisterSuccess(self):
+		userDict = {}
+		userDict['username'] = 'gurulab'
+		userDict['first_name'] = 'Mr'
+		userDict['last_name'] = 'Guru'
+		userDict['email'] = 'guru@guru.com'
+		userDict['password'] = 'work'
+		userDict['verify_password'] = 'work'
 
-
-	def testPostSuccess(self):
-		userDict = model_to_dict(self.user)
-		# invalidPk isn't used in db yet (not enforced by anything but for the tests to
-		#	work thats how it has to be)
-		userDict['id'] = None
-		userDict['verifyPassword'] = self.user.password
-		userDict['username'] = 'guru_labs'
 		count = len(User.objects.all())
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
 		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
@@ -184,11 +185,33 @@ class UserViewTests(TestCase):
 		response = self.createView.post(dummyPost, content_type='application/json')
 		rdata = json.loads(response.content)
 
+		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 		self.assertEquals(count + 1, len(User.objects.all()))
 		try:
 			newUserObj = User.objects.get(pk=rdata['id'])
 		except User.DoesNotExist:
 			self.assertTrue(false)
+
+	def testUserRegisterFail(self):
+		userDict = {}
+		userDict['username'] = 'gurulab'
+		userDict['first_name'] = 'Mr'
+		userDict['last_name'] = 'Guru'
+		userDict['email'] = 'guru@guru.com'
+		userDict['password'] = 'work'
+		userDict['verify_password'] = 'not_work'
+
+		count = len(User.objects.all())
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
+			content_type='application/json')
+
+		response = self.createView.post(dummyPost, content_type='application/json')
+		rdata = json.loads(response.content)
+
+
+		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(count, len(User.objects.all()))
 
 	def testDeleteSuccess(self):
 		self.assertEquals(len(User.objects.all()), 1)

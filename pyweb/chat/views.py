@@ -34,10 +34,10 @@ API_INVALID_DATA = "invalid data: (%s) - errors:(%s)"
 API_BAD_PK = "id %s does not exist (%s)"
 
 class BaseView(View):
-	def invalidRequest(self):
+	def invalidRequest(self, error=''):
 		response = {}
 		response[API_RESULT] = API_FAIL
-		response[API_ERROR] = str(traceback.format_exc())
+		response[API_ERROR] = ' : '.join([str(traceback.format_exc()), error])
 		return HttpResponseBadRequest(json.dumps(response))
 
 class CreateView(BaseView):
