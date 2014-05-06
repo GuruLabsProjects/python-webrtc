@@ -6,7 +6,7 @@ from .models import Profile, Conversation, Message
 class ProfileForm(ModelForm):
 	class Meta:
 		model = Profile
-		fields = ('user',)
+		fields = ('id', 'user',)
 
 class UserCreateForm(ModelForm):
 	verify_password = CharField(256)
@@ -16,7 +16,6 @@ class UserCreateForm(ModelForm):
 
 	def clean(self):
 		cleanedData = super(self.__class__, self).clean()
-		# print dir(cleanedData)
 		if cleanedData.get('password') != cleanedData.get('verify_password'):
 			raise ValidationError("The supplied passwords don't match")
 		return cleanedData

@@ -5,7 +5,7 @@ from django.shortcuts import render, render_to_response
 from django.core import serializers
 from django.core.exceptions import ValidationError
 
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 
 from django.views.generic import View
 from django.template import Context, loader, RequestContext
@@ -89,10 +89,14 @@ class RestView(BaseView):
 		except self.model.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
-			return HttpResponseBadRequest(json.dumps(response))
+			return HttpResponseNotFound(json.dumps(response))
 
 	def put(self, request, *args, **kwargs):
+		print 'request'
+		print dir(request)
+		print request.request
+		print request.model
+		print type(request)
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
@@ -102,7 +106,7 @@ class RestView(BaseView):
 
 			if not objForm.is_valid():
 				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % str(rdata)
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
 			else:
 				objForm.save()
 				response['id'] = objForm.data['id']
@@ -136,6 +140,55 @@ class UserRestView(RestView):
 		self.model = User
 		self.form = UserForm
 		super(self.__class__, self).__init__(*args, **kwargs)
+
+	@method_decorator(login_required)
+	def get(self, request, *args, **kwargs):
+		try:
+			obj = self.model.objects.get(pk=kwargs['pk'])
+			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
+				content_type='application/json')
+		except self.model.DoesNotExist:
+			response = {}
+			response[API_RESULT] = API_FAIL
+			return HttpResponseNotFound(json.dumps(response))
+
+	@method_decorator(login_required)
+	def put(self, request, *args, **kwargs):
+		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+		response = {}
+		try:
+			dbObj = self.model.objects.get(pk=kwargs['pk'])
+
+			objForm = self.form(rdata, instance=dbObj)
+
+			if not objForm.is_valid():
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
+			else:
+				objForm.save()
+				response['id'] = objForm.data['id']
+				response[API_RESULT] = API_SUCCESS
+				return HttpResponse(json.dumps(response))
+
+		except self.model.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+		return HttpResponseBadRequest(json.dumps(response))
+
+	@method_decorator(login_required)
+	def delete(self, request, *args, **kwargs):
+		response = {}
+		try:
+			dbObj = self.model.objects.get(pk=kwargs['pk'])
+			dbObj.delete()
+			response['id'] = kwargs['pk']
+			response[API_RESULT] = API_SUCCESS
+		except self.model.DoesNotExist:
+			response = {}
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+			return HttpResponseBadRequest(json.dumps(response))
+		return HttpResponse(json.dumps(response))
 
 class UserAuthenticateView(BaseView):
 
@@ -205,7 +258,7 @@ class UserCreateView(CreateView):
 
 
 
-class ProfileRestView(BaseView):
+class ProfileRestView(RestView):
 
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
@@ -221,42 +274,43 @@ class ProfileRestView(BaseView):
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 
-	# @method_decorator(login_required)
+	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
-			dbObj = Profile.objects.get(user=kwargs['pk'])
-
+			dbObj = Profile.objects.get(pk=rdata['id'])
 			objForm = ProfileForm(rdata, instance=dbObj)
 
-			if not objForm.is_valid():
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % str(rdata)
-			else:
+			if objForm.is_valid() and dbObj.user.pk == rdata['user']:
 				objForm.save()
 				response['id'] = objForm.data['id']
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
+			else:
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
 
 		except Profile.DoesNotExist:
 			response[API_RESULT] = API_FAIL
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
 		return HttpResponseBadRequest(json.dumps(response))
 
+	# @method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
-		response = {}
-		try:
-			dbObj = Profile.objects.get(user=kwargs['pk'])
-			dbObj.delete()
-			response['id'] = kwargs['pk']
-			response[API_RESULT] = API_SUCCESS
-		except Profile.DoesNotExist:
-			response = {}
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
-			return HttpResponseBadRequest(json.dumps(response))
-		return HttpResponse(json.dumps(response))
+		return self.invalidRequest()
+		# response = {}
+		# try:
+		# 	dbObj = Profile.objects.get(user=kwargs['pk'])
+		# 	dbObj.delete()
+		# 	response['id'] = kwargs['pk']
+		# 	response[API_RESULT] = API_SUCCESS
+		# except Profile.DoesNotExist:
+		# 	response = {}
+		# 	response[API_RESULT] = API_FAIL
+		# 	response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
+		# 	return HttpResponseBadRequest(json.dumps(response))
+		# return HttpResponse(json.dumps(response))
 
 	def post(self, request, *args, **kwargs):
 		return self.invalidRequest()

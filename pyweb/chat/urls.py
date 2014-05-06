@@ -19,16 +19,14 @@ api_urlpatterns = patterns('',
 		name='message-rest'),
 
 	# User REST URLs
-    url(r'^user/$', UserCreateView.as_view(), name='user-create'),
 	url(r'^user/(?P<pk>\d+)/$', UserRestView.as_view(), name='user-rest'),
+    url(r'^user/$', UserCreateView.as_view(), name='user-create'),
 
 	# User Authentication View
-	url(r'^login/$', UserAuthenticateView.as_view(), name='user-authenticate'),
+	url(r'^login/', UserAuthenticateView.as_view(), name='user-authenticate'),
 
 	# Profile REST URLs
 	url(r'^user/(?P<pk>\w+)/profile/$', ProfileRestView.as_view(), name='profile-rest'),
-	# url(r'^user/(?P<pk>\w+)/profile/create$', ProfileCreateView.as_view(),
-	# 	name='profile-create'),
 
 	url(r'^test/(?P<pk>\d+)$', ProfileRestView.as_view(), name='login-test')
 )
