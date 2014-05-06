@@ -193,8 +193,8 @@ class ProfileRestView(BaseView):
 	def get(self, request, *args, **kwargs):
 		try:
 			profile = Profile.objects.get(user=kwargs['pk'])
-			return HttpResponse(json.dumps(model_to_dict(profile), cls=DateTimeAwareEncoder),
-				content_type='application/json')
+			return HttpResponse(json.dumps(model_to_dict(profile),
+				cls=DateTimeAwareEncoder), content_type='application/json')
 
 		except Profile.DoesNotExist:
 			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Profile.__name__))

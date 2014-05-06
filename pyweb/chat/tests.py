@@ -695,13 +695,8 @@ class ConversationViewTests(TestCase):
 		count = len(Conversation.objects.all())
 		jsonData = json.dumps(conversationDict, cls=DateTimeAwareEncoder)
 
-		# dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
-		# 	content_type='application/json')
-
-		# response = self.createView.post(dummyPost, content_type='application/json')
-
-		response = self.client.post(reverse('chat:api:conversation-create'), data=jsonData,
-			content_type='application/json')
+		response = self.client.post(reverse('chat:api:conversation-create'),
+			data=jsonData, content_type='application/json')
 
 		rdata = json.loads(response.content)
 
