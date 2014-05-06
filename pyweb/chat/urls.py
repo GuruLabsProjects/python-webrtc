@@ -2,7 +2,7 @@ from django.conf.urls import patterns, url, include
 
 from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCreateView, \
 	MessageRestView, ConversationCreateView, ConversationRestView, ProfileCreateView, \
-	ProfileRestView
+	ProfileRestView, LoggedInTestView
 	
 
 
@@ -23,12 +23,14 @@ api_urlpatterns = patterns('',
 	url(r'^user/(?P<pk>\d+)/$', UserRestView.as_view(), name='user-rest'),
 
 	# User Authentication View
-	url(r'^authenticate/$', UserAuthenticateView.as_view(), name='user-authenticate'),
+	url(r'^login/$', UserAuthenticateView.as_view(), name='user-authenticate'),
 
 	# Profile REST URLs
 	url(r'^user/(?P<pk>\w+)/profile/$', ProfileCreateView.as_view(),
 		name='profile-create'),
-	url(r'^user/(?P<pk>\w+)/profile/$', ProfileRestView.as_view(), name='profile-rest')
+	url(r'^user/(?P<pk>\w+)/profile/$', ProfileRestView.as_view(), name='profile-rest'),
+
+	url(r'^test/(?P<pk>\d+)$', ProfileRestView.as_view(), name='login-test')
 )
 
 urlpatterns = patterns('chat.views',

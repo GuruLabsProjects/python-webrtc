@@ -27,6 +27,28 @@ CORE_ASSETLIST_CSS = ('normalize', 'foundation')
 username = 'testuser'
 invalidPk = 9999
 
+def login(client, username='guru', password='work'):
+	u = User.objects.create_user(username=username)
+	u.set_password(password)
+	u.save()
+
+	userDict = model_to_dict(u)
+	userDict['password'] = password
+
+	client.user = u
+	client.login(username='guru', password='work')
+
+	jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+
+	response = client.post(reverse('chat:api:user-authenticate'), data=jsonData,
+		content_type='application/json')
+	rdata = json.loads(response.content)
+
+	if rdata[API_RESULT] != API_SUCCESS:
+		raise Exception("Error logging in")
+	if response.status_code != 200:
+		raise Exception("Error logging in")
+
 
 class DatabaseTests(TestCase):
 
@@ -280,29 +302,78 @@ class ProfileViewTests(TestCase):
 		self.createView = ProfileCreateView()
 
 	def testGet(self):
-		dummyGet = self.factory.get(reverse('chat:api:profile-rest',
-			args=(self.user.username, )))
-		response = self.view.get(dummyGet, pk=str(self.profile.pk),
-			username=self.user.username)
+		login(self.client)
+		# dummyGet = self.factory.get(reverse('chat:api:profile-rest',
+		# 	args=(self.user.username, )))
+		# response = self.view.get(dummyGet, pk=str(self.profile.pk),
+		# 	username=self.user.username)
+
+		print reverse('chat:api:profile-rest',
+			args=(self.user.pk, ))
+
+		response = self.client.get(reverse('chat:api:profile-rest',
+			args=(self.user.pk, )), content_type='application/json')
 		
+		print response.content
+
 		response_user = json.loads(response.content, cls=DateTimeAwareDecoder)
 		userForm = ProfileForm(response_user,
 			instance=Profile.objects.get(pk=response_user['id']))
 		#ensure the data we got is valid
 		self.assertEqual(userForm.is_valid(), True)
 
-	def testGetError(self):
-		dummyGet = self.factory.get(reverse('chat:api:profile-rest',
-			args=(self.user.username, )))
-		response = self.view.get(dummyGet, pk=str(self.profile.pk + 1))
+	# def testGetError(self):
+	# 	login(self.client)
+	# 	dummyGet = self.factory.get(reverse('chat:api:profile-rest',
+	# 		args=(self.user.username, )))
+	# 	response = self.view.get(dummyGet, pk=str(self.profile.pk + 1))
 		
-		profileObj = json.loads(response.content, cls=DateTimeAwareDecoder)
-		profileForm = ProfileForm(profileObj, instance=Profile.objects.get(
-			pk=self.profile.pk))
+	# 	profileObj = json.loads(response.content, cls=DateTimeAwareDecoder)
+	# 	profileForm = ProfileForm(profileObj, instance=Profile.objects.get(
+	# 		pk=self.profile.pk))
 
-		self.assertEqual(profileObj[API_RESULT], API_FAIL)
+	# 	self.assertEqual(profileObj[API_RESULT], API_FAIL)
 
-		self.assertEqual(profileForm.is_valid(), False)
+	# 	self.assertEqual(profileForm.is_valid(), False)
+
+	def testLoggedIn(self):
+		# dummyGet = self.factory.get(reverse('chat:api:login-test'))
+		# response = self.view.get(dummyGet, pk=str(self.profile.pk),
+		# 	username=self.user.username)
+		# u = User.objects.create_user(username='guru')
+		# u.set_password('work')
+		# u.save()
+
+		# userDict = model_to_dict(u)
+		# userDict['password'] = 'work'
+
+		# jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+
+		# response = self.client.post(reverse('chat:api:user-authenticate'), data=jsonData,
+		# 	content_type='application/json')
+		# rdata = json.loads(response.content)
+
+		# self.assertEqual(rdata[API_RESULT], API_SUCCESS)
+		# self.assertEqual(response.status_code, 200)
+
+		# self.client.username = 'guru'
+		# self.client.password = 'work'
+		# self.client.user = u
+
+		# res = self.client.login(username='guru', password='work')
+
+		# self.assertTrue(res, "Failed to login to client")
+		login(self.client)
+
+
+		response = self.client.get(reverse('chat:api:login-test', args=(self.user.pk, )),
+			content_type='application/json')
+		
+		response_user = json.loads(response.content, cls=DateTimeAwareDecoder)
+		userForm = ProfileForm(response_user,
+			instance=Profile.objects.get(pk=response_user['id']))
+		#ensure the data we got is valid
+		self.assertEqual(userForm.is_valid(), True)
 
 	def testPutSuccess(self):
 		#Not really sure what to test here since Profile (so far) only has a one to one

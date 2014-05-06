@@ -9,6 +9,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 
 from django.views.generic import View
 from django.template import Context, loader, RequestContext
+from django.utils.decorators import method_decorator
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
@@ -200,9 +201,10 @@ class UserCreateView(CreateView):
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 		return HttpResponseBadRequest(json.dumps(response))
 
+
 class ProfileRestView(BaseView):
 
-	@login_required
+	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
 		try:
 			obj = Profile.objects.get(user=kwargs['pk'])
@@ -214,6 +216,7 @@ class ProfileRestView(BaseView):
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
 
+	# @method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
@@ -252,6 +255,16 @@ class ProfileRestView(BaseView):
 
 	def post(self, request, *args, **kwargs):
 		return self.invalidRequest()
+
+class LoggedInTestView(ProfileRestView):
+	def __init__(self, *args, **kwargs):
+		# self.user = None
+		return super(self.__class__, self).__init__(*args, **kwargs)
+
+	# @login_required(login_url='/login/')
+	def get(self, request, *args, **kwargs):
+		print request.user
+		super(self.__class__, self).get(request, *args, **kwargs)
 
 class ProfileCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
