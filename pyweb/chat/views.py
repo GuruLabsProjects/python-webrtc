@@ -208,6 +208,8 @@ class MessageCreateView(CreateView):
 
 
 def application_index(request):
-	return render_to_response('index.html', {
+	iview = 'chat.create-account.html'
+	if request.user.is_authenticated(): iview = 'index.html'
+	return render_to_response(iview, {
 			'title' : 'Guru Labs Chat Demo Application',
 		}, context_instance=RequestContext(request))

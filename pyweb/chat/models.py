@@ -27,7 +27,7 @@ class Message(models.Model):
 	'''
 	id = models.CharField(primary_key=True, max_length=36, unique=True)
 	text = models.CharField(max_length=256)
-	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='date submitted')
+	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='Date Sent')
 	sender = models.ForeignKey(User)
 
 	def generateMessageId(self): return uuid.uuid4().hex
