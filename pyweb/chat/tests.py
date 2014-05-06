@@ -161,7 +161,8 @@ class UserViewTests(TestCase):
 
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
 
-		response = self.client.post(reverse('chat:api:user-authenticate'), data=jsonData, content_type='application/json')
+		response = self.client.post(reverse('chat:api:user-authenticate'), data=jsonData,
+			content_type='application/json')
 		rdata = json.loads(response.content)
 
 		self.assertEqual(rdata[API_RESULT], API_SUCCESS)
@@ -630,19 +631,3 @@ class ConversationViewTests(TestCase):
 			content_type='application/json', pk=str(self.conversation.id))
 
 		self.assertTrue(response.status_code == 400)
-
-	# def testPostFailure(self):
-	# 	badDict = model_to_dict(self.user)
-		
-	# 	count = len(Conversation.objects.all())
-	# 	jsonData = json.dumps(badDict, cls=DateTimeAwareEncoder)
-	# 	dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
-	# 		content_type='application/json')
-
-	# 	response = self.createView.post(dummyPost, content_type='application/json')
-
-	# 	rdata = json.loads(response.content)
-		
-
-	# 	self.assertEquals(count, len(Conversation.objects.all()))
-	# 	self.assertEquals(rdata[API_RESULT], API_FAIL)

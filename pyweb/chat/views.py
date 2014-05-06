@@ -202,6 +202,7 @@ class UserCreateView(CreateView):
 
 class ProfileRestView(BaseView):
 
+	@login_required
 	def get(self, request, *args, **kwargs):
 		try:
 			obj = Profile.objects.get(user=kwargs['pk'])
