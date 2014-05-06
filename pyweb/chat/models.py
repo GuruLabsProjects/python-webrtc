@@ -27,7 +27,8 @@ class Message(models.Model):
 	'''
 	id = models.CharField(primary_key=True, max_length=36, unique=True)
 	text = models.CharField(max_length=256)
-	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='date submitted')
+	timestamp = models.DateTimeField(default=datetime.datetime.now,
+		verbose_name='date submitted')
 	sender = models.ForeignKey(User)
 
 	def generateMessageId(self): return uuid.uuid4().hex
@@ -42,7 +43,8 @@ class Message(models.Model):
 
 	def __str__(self):
 		# return ''.join([self.sender.user.username,self.text])
-		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.id) if s is not None])
+		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.id) \
+			if s is not None])
 
 class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
