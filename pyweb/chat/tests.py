@@ -178,6 +178,7 @@ class UserViewTests(TestCase):
 		userDict['verify_password'] = 'work'
 
 		count = len(User.objects.all())
+		countProfiles = len(Profile.objects.all())
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
 		dummyPost = self.factory.post(reverse('chat:api:user-create'), data=jsonData,
 			content_type='application/json')
@@ -187,10 +188,14 @@ class UserViewTests(TestCase):
 
 		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 		self.assertEquals(count + 1, len(User.objects.all()))
+		self.assertEquals(countProfiles + 1, len(Profile.objects.all()))
 		try:
 			newUserObj = User.objects.get(pk=rdata['id'])
+			profile = Profile.objects.get(user=newUserObj)
 		except User.DoesNotExist:
-			self.assertTrue(false)
+			self.assertTrue(False, "User doesn't exist when it should...")
+		except Profile.DoesNotExist:
+			self.assertFalse(True, "Profile creation didn't occur")
 
 	def testUserRegisterFail(self):
 		userDict = {}

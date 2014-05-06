@@ -189,6 +189,8 @@ class UserCreateView(CreateView):
 				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
 			else:
 				obj = objForm.save()
+				profile = Profile(user=obj)
+				profile.save()
 				response['id'] = obj.pk
 				response[API_RESULT] = API_SUCCESS
 				return HttpResponse(json.dumps(response))
