@@ -55,7 +55,8 @@ class BaseView(View):
 		return self.invalidRequest()		
 
 class UserRestView(BaseView):
-
+	''' RestView for User class
+	'''
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
 		try:
@@ -72,16 +73,18 @@ class UserRestView(BaseView):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
-			user = User.objects.get(pk=kwargs['pk'])
-			userForm = UserForm(rdata, instance=user)
-			if userForm.is_valid():
-				userForm.save()
-				response['id'] = userForm.data['id']
-				response[API_RESULT] = API_SUCCESS
-				return HttpResponse(json.dumps(response))
-			else:
-				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
+			if str(request.user.pk) == str(kwargs['pk']):
+				user = User.objects.get(pk=kwargs['pk'])
+				userForm = UserForm(rdata, instance=user)
+				if userForm.is_valid():
+					userForm.save()
+					response['id'] = userForm.data['id']
+					response[API_RESULT] = API_SUCCESS
+					return HttpResponse(json.dumps(response))
+				else:
+					response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
+			response[API_RESULT] = API_FAIL
+			return HttpResponseNotFound(json.dumps(response))
 
 		except User.DoesNotExist:
 			response[API_RESULT] = API_FAIL
@@ -91,17 +94,21 @@ class UserRestView(BaseView):
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
 		response = {}
-		try:
-			user = User.objects.get(pk=kwargs['pk'])
-			user.delete()
-			response['id'] = kwargs['pk']
-			response[API_RESULT] = API_SUCCESS
+		try:		
+			if str(request.user.pk) == str(kwargs['pk']):	
+				user = User.objects.get(pk=kwargs['pk'])
+				user.delete()
+				response['id'] = kwargs['pk']
+				response[API_RESULT] = API_SUCCESS
+				return HttpResponse(json.dumps(response))
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = "%s vs %s" % (request.user.pk, kwargs['pk'], )
+			return HttpResponseNotFound(json.dumps(response))
 		except User.DoesNotExist:
 			response = {}
 			response[API_RESULT] = API_FAIL
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], User.__name__)
 			return HttpResponseBadRequest(json.dumps(response))
-		return HttpResponse(json.dumps(response))
 
 class UserAuthenticateView(BaseView):
 

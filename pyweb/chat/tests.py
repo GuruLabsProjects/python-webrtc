@@ -160,7 +160,7 @@ class UserViewTests(TestCase):
 	def testPutSuccess(self):
 		''' Successfully updates a user through a Put request
 		'''
-		login(self.client)
+		login(self.client, user=self.user, password='work')
 
 		userDict = model_to_dict(self.user)
 		userDict['email'] = 'guru@guru.com'
@@ -182,11 +182,10 @@ class UserViewTests(TestCase):
 	def testPutError(self):
 		''' unsuccessfully updates the user - invalid user id
 		'''
-		login(self.client)
+		login(self.client, username='new username', password='work')
 
-		# userDict = model_to_dict(self.user)
 		userDict = {}
-		userDict['username'] = username
+		userDict['username'] = 'new username'
 		userDict['first_name'] = 'Mr'
 		userDict['last_name'] = 'Guru'
 		userDict['email'] = 'guru@guru.com'
@@ -198,12 +197,7 @@ class UserViewTests(TestCase):
 		response = self.client.put(reverse('chat:api:user-rest', args=(invalidPk,)),
 		 data=jsonData, content_type='application/json')
 
-		rdata = json.loads(response.content)
-
-		self.assertEquals(User.objects.get(pk=self.user.pk).email, '')
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
-
-		self.assertTrue(rdata[API_ERROR] is not None)
+		self.assertEquals(response.status_code, 404)
 
 	def testUserAuthenticate(self):
 		''' tests the login method to ensure it's working
@@ -295,14 +289,19 @@ class UserViewTests(TestCase):
 	def testDeleteSuccess(self):
 		''' tests deletion of user through delete request
 		'''
-		login(self.client)
+
+		user = User.objects.create_user(username='gurus lab coat', password='work')
+		user.save()
+
+		login(self.client, user=user)
 
 		count = len(User.objects.all())
 
 		response = self.client.delete(reverse('chat:api:user-rest',
-			args=(self.user.pk, )), content_type='application/json')
+			args=(user.pk, )), content_type='application/json')
 
 		rdata = json.loads(response.content)
+
 		self.assertEquals(len(User.objects.all()), count - 1)
 
 		with self.assertRaises(User.DoesNotExist):
