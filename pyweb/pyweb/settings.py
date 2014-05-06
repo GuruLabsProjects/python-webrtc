@@ -92,6 +92,7 @@ TEMPLATE_DIRS = (
 	os.path.join(PROJECT_DIR, 'templates'),
 )
 
+
 # Logging Configuration
 if DEBUG:
 	LOGGING = {

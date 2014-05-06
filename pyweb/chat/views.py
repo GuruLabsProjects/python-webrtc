@@ -3,17 +3,21 @@ import uuid, json, logging, datetime, traceback
 from django.shortcuts import render, render_to_response
 
 from django.core import serializers
+from django.core.exceptions import ValidationError
 
 from django.http import HttpResponse, HttpResponseBadRequest
-from django.contrib.auth.decorators import login_required
 
 from django.views.generic import View
 from django.template import Context, loader, RequestContext
 
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+
 from django.forms.models import model_to_dict
 
-from .util import DateTimeAwareEncoder, DateTimeAwareDecoder
+from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import (UserForm, ProfileForm, MessageForm, ConversationForm,
@@ -131,11 +135,68 @@ class UserRestView(RestView):
 		self.form = UserForm
 		super(self.__class__, self).__init__(*args, **kwargs)
 
+class UserAuthenticateView(BaseView):
+
+	def post(self, request, *args, **kwargs):
+
+		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+
+		response = {}
+		try:
+			authForm = AuthenticationForm(data=rdata)
+
+			if authForm.is_valid():
+
+				user = authenticate(username=authForm.cleaned_data['username'],
+					password=authForm.cleaned_data['password'])
+
+				if user:
+					if user.is_active:
+						login(request, user)
+						response[API_RESULT] = API_SUCCESS
+						return HttpResponse(json.dumps(response))
+					else:
+						raise self.ValidationError("User account %s is disabled" % username)
+				else:
+					raise ValidationError("Invalid username and/or password")
+			else:
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), authForm.errors)
+		except User.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+		except ValidationError as err:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = err
+		for u in User.objects.all():
+			print "username: %s, password: %s" % (u.username, u.password)
+		return HttpResponseBadRequest(json.dumps(response))
+
+
 class UserCreateView(CreateView):
 	def __init__(self, *args, **kwargs):
 		self.model = User
 		self.form = UserCreateForm
 		super(self.__class__, self).__init__(*args, **kwargs)
+
+	def post(self, request, *args, **kwargs):
+		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+		response = {}
+		try:
+			objForm = self.form(rdata)
+			if not objForm.is_valid():
+				response[API_RESULT] = API_FAIL
+				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
+			else:
+				obj = objForm.save()
+				response['id'] = obj.pk
+				response[API_RESULT] = API_SUCCESS
+				return HttpResponse(json.dumps(response))
+
+		except self.model.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+		return HttpResponseBadRequest(json.dumps(response))
 
 class ProfileRestView(BaseView):
 

@@ -6,18 +6,16 @@ from django.db import models, transaction, IntegrityError
 from django.core import serializers
 from django.core.urlresolvers import reverse
 from django.test import TestCase
-from django.test.client import RequestFactory
+from django.test.client import RequestFactory, Client
 
 from django.contrib.auth.models import User, UserManager
 from django.forms.models import model_to_dict
 
-from .util import DateTimeAwareEncoder, DateTimeAwareDecoder
+from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import ProfileForm, UserForm, MessageForm, ConversationForm
-from .views import UserRestView, UserCreateView, MessageRestView, MessageCreateView, \
-	ConversationCreateView, ConversationRestView, ProfileRestView, ProfileCreateView, \
-	API_FAIL, API_ERROR, API_RESULT, API_SUCCESS 
+from .views import *
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +87,20 @@ class UserViewTests(TestCase):
 
 	def setUp(self):
 		# Create test user
-		self.user = User.objects.create_user(username=username)
+		self.user = User.objects.create_user(username=username, password='work')
 		self.user.save()
+		# self.client.login(username='guru', password='work')
+		# session = self.client.session
+		# session['key']='value'
+		# session.save()
 		self.view = UserRestView()
 		self.createView = UserCreateView()
+		self.authView = UserAuthenticateView()
 
 	def testGetSuccess(self):
 		dummyGet = self.factory.get(reverse('chat:api:user-rest', args=str(self.user.pk)))
 		response = self.view.get(dummyGet, pk=str(self.user.pk))
+		# response = self.client.get(dummyGet, pk=str(self.user.pk))
 
 		userObj = json.loads(response.content, cls=DateTimeAwareDecoder)
 		userForm = UserForm(userObj, instance=User.objects.get(
@@ -144,11 +148,33 @@ class UserViewTests(TestCase):
 
 		self.assertTrue(rdata[API_ERROR] is not None)
 
+	def testUserAuthenticate(self):
+		#tests user authentication
+		u = User.objects.create_user(username='guru')
+		u.set_password('work')
+		u.save()
+
+		userDict = model_to_dict(u)
+		userDict['password'] = 'work'
+
+		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
+
+		response = self.client.post(reverse('chat:api:user-authenticate'), data=jsonData, content_type='application/json')
+		rdata = json.loads(response.content)
+
+		self.assertEqual(rdata[API_RESULT], API_SUCCESS)
+		self.assertEqual(response.status_code, 200)
+
+	
+
+
+
 	def testPostSuccess(self):
 		userDict = model_to_dict(self.user)
 		# invalidPk isn't used in db yet (not enforced by anything but for the tests to
 		#	work thats how it has to be)
 		userDict['id'] = None
+		userDict['verifyPassword'] = self.user.password
 		userDict['username'] = 'guru_labs'
 		count = len(User.objects.all())
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
@@ -157,6 +183,7 @@ class UserViewTests(TestCase):
 
 		response = self.createView.post(dummyPost, content_type='application/json')
 		rdata = json.loads(response.content)
+
 		self.assertEquals(count + 1, len(User.objects.all()))
 		try:
 			newUserObj = User.objects.get(pk=rdata['id'])
