@@ -61,7 +61,7 @@ class Conversation(models.Model):
 		# Generate conversation id if the model does not already have one
 		if not self.id: self.id = self.generateConversationId()
 		# Save model instance, in cases with duplicate IDs, generate a new ID and resave
-		def conversationsave(): super(self.__class__, self).save(*args, **kwargs)
+		def conversationsave():	super(self.__class__, self).save(*args, **kwargs)
 		def duplicateid(): self.id = self.generateConversationId()
 		retry_action(conversationsave, exception_actions={ IntegrityError : duplicateid })
 

@@ -92,11 +92,6 @@ class RestView(BaseView):
 			return HttpResponseNotFound(json.dumps(response))
 
 	def put(self, request, *args, **kwargs):
-		print 'request'
-		print dir(request)
-		print request.request
-		print request.model
-		print type(request)
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
@@ -219,12 +214,11 @@ class UserAuthenticateView(BaseView):
 				response[API_ERROR] = API_INVALID_DATA % (str(rdata), authForm.errors)
 		except User.DoesNotExist:
 			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+			return HttpResponseNotFound(json.dumps(response))
+			# response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
 		except ValidationError as err:
 			response[API_RESULT] = API_FAIL
 			response[API_ERROR] = err
-		for u in User.objects.all():
-			print "username: %s, password: %s" % (u.username, u.password)
 		return HttpResponseBadRequest(json.dumps(response))
 
 
@@ -263,8 +257,6 @@ class ProfileRestView(RestView):
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
 		try:
-			# for prof in Profile.objects.all():
-			# 	print prof.user.pk
 			obj = Profile.objects.get(user=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
 				content_type='application/json')
@@ -296,40 +288,18 @@ class ProfileRestView(RestView):
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
 		return HttpResponseBadRequest(json.dumps(response))
 
-	# @method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
 		return self.invalidRequest()
-		# response = {}
-		# try:
-		# 	dbObj = Profile.objects.get(user=kwargs['pk'])
-		# 	dbObj.delete()
-		# 	response['id'] = kwargs['pk']
-		# 	response[API_RESULT] = API_SUCCESS
-		# except Profile.DoesNotExist:
-		# 	response = {}
-		# 	response[API_RESULT] = API_FAIL
-		# 	response[API_ERROR] = API_BAD_PK % (kwargs['pk'], Profile.__name__)
-		# 	return HttpResponseBadRequest(json.dumps(response))
-		# return HttpResponse(json.dumps(response))
 
 	def post(self, request, *args, **kwargs):
 		return self.invalidRequest()
-
-class LoggedInTestView(ProfileRestView):
-	def __init__(self, *args, **kwargs):
-		# self.user = None
-		return super(self.__class__, self).__init__(*args, **kwargs)
-
-	# @login_required(login_url='/login/')
-	def get(self, request, *args, **kwargs):
-		print request.user
-		super(self.__class__, self).get(request, *args, **kwargs)
 
 class ConversationRestView(BaseView):
 	def __init__(self, *args, **kwargs):
 		self.model = Conversation
 		self.form = ConversationForm
 		super(self.__class__, self).__init__(*args, **kwargs)
+
 
 	def get(self, *args, **kwargs):
 		try:
@@ -351,7 +321,23 @@ class ConversationRestView(BaseView):
 		return self.invalidRequest()
 
 	def delete(self, request, *args, **kwargs):
-		return self.invalidRequest()
+		response = {}
+		try:
+			dbObj = self.model.objects.get(pk=kwargs['pk'])
+			if request.user in dbObj.participants.all():
+				dbObj.delete()
+				response['id'] = kwargs['pk']
+				response[API_RESULT] = API_SUCCESS
+			else:
+				response[API_RESULT] = API_FAIL
+				# response[API_RESULT] = 'user doesnt belong in that convo'
+				return HttpResponseNotFound(json.dumps(response))
+		except self.model.DoesNotExist:
+			response = {}
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+			return HttpResponseBadRequest(json.dumps(response))
+		return HttpResponse(json.dumps(response))
 
 class ConversationCreateView(CreateView):
 	def __init__(self, *args, **kwargs):

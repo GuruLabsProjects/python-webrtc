@@ -27,9 +27,12 @@ CORE_ASSETLIST_CSS = ('normalize', 'foundation')
 username = 'testuser'
 invalidPk = 9999
 
-def login(client, username='guru', password='work'):
-	u = User.objects.create_user(username=username)
-	u.set_password(password)
+def login(client, username='guru', password='work', user=None):
+	if user is None:
+		u = User.objects.create_user(username=username)
+		u.set_password(password)
+	else:
+		u = user
 	u.save()
 
 	userDict = model_to_dict(u)
@@ -45,7 +48,7 @@ def login(client, username='guru', password='work'):
 	rdata = json.loads(response.content)
 
 	if rdata[API_RESULT] != API_SUCCESS:
-		raise Exception("Error logging in")
+		raise Exception("Error logging in %s" % (rdata[API_ERROR]))
 	if response.status_code != 200:
 		raise Exception("Error logging in")
 	return rdata
@@ -145,26 +148,9 @@ class UserViewTests(TestCase):
 		login(self.client)
 
 		userDict = model_to_dict(self.user)
-		# userDict = {}
-		# userDict['username'] = username
-		# userDict['first_name'] = 'Mr'
-		# userDict['last_name'] = 'Guru'
 		userDict['email'] = 'guru@guru.com'
-		# userDict['password'] = 'work'
-		# userDict['verify_password'] = 'work'
-		# userDict['email'] = 'guru@gurulabs.com'
 
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
-
-		# dummyPut = self.factory.put(reverse('chat:api:user-rest', args=(
-		# 	str(self.user.pk), ) ), jsonData)
-		# response = self.view.put(dummyPut, content_type='application/json', pk=str(self.user.pk))
-		# print jsonData
-		# response = self.client.put(
-		# 	reverse('chat:api:user-rest',
-		# 	args=(self.user.pk, ) ),
-		# 	data=jsonData,
-		# 	content_type='application/json')
 
 		response = self.client.put(
 			reverse('chat:api:user-rest',
@@ -192,9 +178,6 @@ class UserViewTests(TestCase):
 		userDict['email'] = 'guru@gurulabs.com'
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
 
-		# dummyPut = self.factory.put(reverse('chat:api:user-rest', args=(
-		# 	invalidPk, ) ), jsonData)
-		# response = self.view.put(dummyPut, content_type='application/json', pk=str(invalidPk))
 		response = self.client.put(reverse('chat:api:user-rest', args=(invalidPk,)),
 		 data=jsonData, content_type='application/json')
 
@@ -429,29 +412,6 @@ class ProfileViewTests(TestCase):
 		self.assertEquals(Profile.objects.get(pk=self.profile.pk).user.pk, self.user.pk)
 		self.assertNotEquals(Profile.objects.get(pk=self.profile.pk).user.pk, user.pk)
 
-	# def testDeleteSuccess(self):
-	# 	login(self.client)
-	# 	self.assertEquals(len(Profile.objects.all()), 1)
-
-	# 	response = self.client.delete(reverse('chat:api:profile-rest',
-	# 	 	args=(self.user.pk, )), content_type='application/json')
-
-	# 	rdata = json.loads(response.content)
-	# 	self.assertEquals(len(Profile.objects.all()), 0)
-	# 	with self.assertRaises(Profile.DoesNotExist):
-	# 		Profile.objects.get(pk=rdata['id'])
-
-	# def testDeleteFailure(self):
-	# 	login(self.client)
-	# 	self.assertEquals(len(Profile.objects.all()), 1)
-
-	# 	response = self.client.delete(reverse('chat:api:profile-rest',
-	# 	 	args=(invalidPk, )), content_type='application/json')
-
-	# 	rdata = json.loads(response.content)
-	# 	self.assertEquals(rdata[API_RESULT], API_FAIL)
-	# 	self.assertEquals(len(Profile.objects.all()), 1)
-
 
 class MessageViewTest(TestCase):
 	def __init__(self, *args, **kwargs):
@@ -590,6 +550,7 @@ class MessageViewTest(TestCase):
 		self.assertEquals(rdata[API_RESULT], API_FAIL)
 		self.assertEquals(count, len(Message.objects.all()))
 
+
 class ConversationViewTests(TestCase):
 	def __init__(self, *args, **kwargs):
 		self.factory = RequestFactory()
@@ -619,8 +580,10 @@ class ConversationViewTests(TestCase):
 		self.createView = ConversationCreateView()
 
 	def testGetSuccess(self):
-		dummyGet = self.factory.get(reverse('chat:api:conversation-rest', args=(self.conversation.id, )))
-		response = self.view.get(dummyGet, pk=str(self.conversation.id))
+		login(self.client)
+
+		response = self.client.get(reverse('chat:api:conversation-rest',
+			args=(self.conversation.id, )), content_type='application/json')
 
 		msgs = json.loads(response.content, cls=DateTimeAwareDecoder)
 
@@ -638,14 +601,20 @@ class ConversationViewTests(TestCase):
 			self.assertFalse(foundIt, "%s not found in %s" % (msg, str(dbmsgs)))
 
 	def testPostSuccess(self):
+		login(self.client)
+
 		convo = Conversation()
 		conversationDict = model_to_dict(convo)
 		count = len(Conversation.objects.all())
 		jsonData = json.dumps(conversationDict, cls=DateTimeAwareEncoder)
-		dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
-			content_type='application/json')
 
-		response = self.createView.post(dummyPost, content_type='application/json')
+		# dummyPost = self.factory.post(reverse('chat:api:conversation-create'), data=jsonData,
+		# 	content_type='application/json')
+
+		# response = self.createView.post(dummyPost, content_type='application/json')
+
+		response = self.client.post(reverse('chat:api:conversation-create'), data=jsonData,
+			content_type='application/json')
 
 		rdata = json.loads(response.content)
 
@@ -656,6 +625,7 @@ class ConversationViewTests(TestCase):
 			self.assertTrue(false, "error with message post")
 
 	def testPut(self):
+		login(self.client)
 		#this should always fail
 		convo = Conversation()
 		convo.save()
@@ -664,21 +634,42 @@ class ConversationViewTests(TestCase):
 		convoDict = model_to_dict(convo)
 		jsonData = json.dumps(convoDict, cls=DateTimeAwareEncoder)
 
-		dummyPut = self.factory.put(reverse('chat:api:conversation-rest', args=(
-			str(convo.pk), ) ), jsonData)
-		response = self.view.put(dummyPut, content_type='application/json',
-			pk=str(convo.pk))
+		response = self.client.put(reverse('chat:api:conversation-rest', args=(
+			str(convo.pk), ) ), data=jsonData, content_type='application/json')
 
 		rdata = json.loads(response.content)
 
 		self.assertTrue(rdata[API_RESULT], API_FAIL)
 		self.assertTrue(response.status_code == 400)
 
-	def testDelete(self):
-		#this should always fail
-		dummyPut = self.factory.delete(reverse('chat:api:conversation-rest',
-			args=(self.conversation.id, ) ))
-		response = self.view.delete(dummyPut, 
-			content_type='application/json', pk=str(self.conversation.id))
+	def testDeleteFail(self):
+		''' This tests a user trying to delete a conversation they don't belong to.
+				Should 404
+		'''
+		login(self.client)
+		response = self.client.delete(reverse('chat:api:conversation-rest',
+			args=(self.conversation.id, ) ), content_type='application/json')
 
-		self.assertTrue(response.status_code == 400)
+		self.assertEquals(response.status_code, 404)
+
+	def testDeleteSuccess(self):
+		''' This tests a user trying to delete a conversation they belong to.
+				Should 200
+		'''
+		user = User.objects.create_user(username='user1', password='work')
+		user.save()
+
+		self.conversation.participants.add(user)
+		self.conversation.save()
+
+		count = len(Conversation.objects.all())
+
+		login(self.client, user=user)
+		response = self.client.delete(reverse('chat:api:conversation-rest',
+			args=(self.conversation.id, ) ), content_type='application/json')
+		rdata = json.loads(response.content)
+
+
+		self.assertEquals(count - 1, len(Conversation.objects.all()))
+		self.assertEquals(response.status_code, 200)
+		self.assertEquals(rdata[API_RESULT], API_SUCCESS)

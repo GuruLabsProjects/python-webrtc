@@ -2,7 +2,7 @@ from django.conf.urls import patterns, url, include
 
 from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCreateView, \
 	MessageRestView, ConversationCreateView, ConversationRestView, \
-	ProfileRestView, LoggedInTestView
+	ProfileRestView
 	
 
 
