@@ -8,7 +8,7 @@
 	<div class="small-12 medium-4 columns"><h2>Connections</h2></div>
 	<div class="small-12 medium-8 columns">
 		<ul class="button-group right">
-			<li><a class="button small">Create Account</a></li>
+			<li><a id="btn-create-account" class="button small">Create Account</a></li>
 			<li><a class="button secondary small">Sign In</a></li>
 		</ul>
 	</div>
@@ -34,6 +34,13 @@
 <article="row">
 <div class="large-12 columns"><h4 class="centered"><small>Connections is a sample application developed by Guru Labs. Copyright 2014, all rights reserved.</small></h4></div>
 </article="row"></section>
+<!-- Model Dialog Content -->
+<article id="modal-content" class="reveal-modal" data-reveal></article>
+<!-- Guru Labs API URLs -->
+<api user-create="{% url 'chat:forms:user-create' %}" ></api>
+<!-- JavaScript Template Files -->
+{% include 'js-templates/chat.html' %}
+<!-- Front Page Application URLs -->
 <script src="{{ STATIC_URL }}js/chat/base.models.js"></script>
 <script src="{{ STATIC_URL }}js/chat/base.views.js"></script>
 <script src="{{ STATIC_URL }}js/chat/chat.frontpage.js"></script>

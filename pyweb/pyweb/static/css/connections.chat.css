@@ -1,0 +1,26 @@
+.centered { text-align: center; }
+
+.create-connections {
+	background-image: url('../img/highres/chat-citywide.jpg');
+	background-size: cover;
+}
+
+.header-bar {
+	background-color: white;
+	min-height: 40px;
+}
+
+.footer-bar-frontpage {
+	position: fixed;
+	min-height: 40px;
+	width: 100%;
+	bottom: 0;
+}
+
+.footer-bar-frontpage * {
+	color: white !important;
+}
+
+small.error {
+	margin-top: -16px !important;
+}

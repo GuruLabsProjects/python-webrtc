@@ -1,0 +1,20 @@
+{% extends 'forms/forms.base-ajax.html' %}
+
+{% block formcontent %}
+<fieldset><legend>Create a New Account</legend>
+<section class="row"><article class="large-12 columns">
+<label>{{ form.username.label }}{{ form.username }}</label></article></section>
+<section class="row">
+<article class="large-6 columns"><label>{{ form.password.label }}{{ form.password }}</label></article>
+<article class="large-6 columns"><label>{{ form.verify_password.label }}{{ form.verify_password }}</label></article>
+</section>
+<section class="row">
+<article class="large-6 columns"><label>{{ form.first_name.label }}</label>{{ form.first_name }}</article>
+<article class="large-6 columns"><label>{{ form.last_name.label }}</label>{{ form.last_name }}</article>
+</section>
+<section class="row">
+<article class="large-12 columns"><label>{{ form.email.label }}{{ form.email }}</article></section>
+</fieldset>
+{% endblock %}
+
+{% block btntext_formsubmit %}Create Account{% endblock %}

@@ -6,6 +6,7 @@ from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCr
 	
 
 
+# Provides URLs to API endpoints
 api_urlpatterns = patterns('',
 	# Conversation REST URLs
     url(r'^conversation/$', ConversationCreateView.as_view(), name='conversation-create'),
@@ -31,8 +32,16 @@ api_urlpatterns = patterns('',
 	url(r'^test/(?P<pk>\d+)$', ProfileRestView.as_view(), name='login-test')
 )
 
+# Provides URL endpoints to forms rendered as HTML
+form_urlpatterns = patterns('chat.views',
+	# Create User Form
+	url(r'^user/create/$', 'form_user_create', name='user-create'),
+)
+
+# Main URL structure for the application
 urlpatterns = patterns('chat.views',
 	# Application Index Page
 	url(r'^$', 'application_index', name='appindex'),
 	url(r'^api/', include(api_urlpatterns, namespace='api')),
+	url(r'^forms/', include(form_urlpatterns, namespace='forms')),
 )

@@ -21,8 +21,8 @@ from django.forms.models import model_to_dict
 from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
-from .forms import (UserForm, ProfileForm, MessageForm, ConversationForm,
-	UserCreateForm, MessageCreateForm, ConversationCreateForm)
+from .forms import UserForm, ProfileForm, MessageForm, ConversationForm, \
+	UserCreateForm, MessageCreateForm, ConversationCreateForm
 
 logger = logging.getLogger(__name__)
 
@@ -397,9 +397,20 @@ class MessageCreateView(CreateView):
 				self.model.__name__), (API_BAD_PK % (kwargs['cpk']))])
 		return HttpResponseBadRequest(json.dumps(response))
 
+
 def application_index(request):
-	iview = 'chat.create-account.html'
-	if request.user.is_authenticated(): iview = 'index.html'
-	return render_to_response(iview, {
+	'''	Index view for the chat application. Checks to see if a user is authenticated.
+		If a user is authenticated, the view returns the active user index page.
+		Otherwise the "create user" page is provided.
+	'''
+	vname = 'chat.create-account.html'
+	if request.user.is_authenticated(): vname = 'index.html'
+	return render_to_response(vname, {
 			'title' : 'Guru Labs Chat Demo Application',
+		}, context_instance=RequestContext(request))
+
+
+def form_user_create(request):
+	return render_to_response('forms/user-create.html', {
+			'form' : UserCreateForm(),
 		}, context_instance=RequestContext(request))
