@@ -184,9 +184,8 @@ class UserCreateView(BaseView):
 			else: response[API_ERROR] = dict(userForm.errors.items())
 
 		except self.model.DoesNotExist:
-			response[API_RESULT] = API_FAIL
-			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
-		
+			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
+				self.model.__name__))		
 		return HttpResponseBadRequest(json.dumps(response))
 
 
