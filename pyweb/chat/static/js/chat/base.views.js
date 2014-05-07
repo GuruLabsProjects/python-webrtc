@@ -141,7 +141,7 @@ WebsocketMessenger.Views.FormView = WebsocketMessenger.Views.BaseModelView.exten
 		var mview = this;
 		_.each(mview.form_fieldnames, function(fieldname){
 			var fcontrol = mview.$('[name='+fieldname+']'); // Retrieve HTML control
-			mview.model.attributes[fieldname] = fcontrol.val()
+			mview.model.attributes[fieldname] = fcontrol.val();
 			if (mview.form_trackchanges) mview.trackFormChange(fieldname, fcontrol); // Track field changes
 		});
 	},
