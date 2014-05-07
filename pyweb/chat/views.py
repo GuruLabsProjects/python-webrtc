@@ -172,7 +172,7 @@ class UserCreateView(BaseView):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
 		try:
-			userForm = UserCreationForm(rdata)
+			userForm = UserCreateForm(rdata)
 
 			if userForm.is_valid():
 				user = userForm.save()

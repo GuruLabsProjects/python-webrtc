@@ -27,12 +27,11 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 
 	initialize: function(options) {
 		options = options || {};
-		var mview = this;
 		
 		// Set view default options
 		_.defaults(options, { 
-			'user_msg_accountcreated' : mview.user_msg_accountcreated, 
-			'form_errors_selectorstring' : mview.form_errors_selectorstring,
+			'user_msg_accountcreated' : this.user_msg_accountcreated, 
+			'form_errors_selectorstring' : this.form_errors_selectorstring,
 		});
 		this.form_errors_selectorstring = options.form_errors_selectorstring;
 		this.user_msg_accountcreated = options.user_msg_accountcreated;
