@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block body-background %}create-connections{% endblock %}
+
+{% block header %}
+<section class="header-bar">
+<div class="row">
+	<div class="small-12 medium-4 columns"><h2>Connections</h2></div>
+	<div class="small-12 medium-8 columns">
+		<ul class="button-group right">
+			<li><a class="button small">Create Account</a></li>
+			<li><a class="button secondary small">Sign In</a></li>
+		</ul>
+	</div>
+</div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="row">
+<article class="small-8 small-centered columns">
+<h4 class="centered">Connections makes it easy to find and connect with friends, family, and people you know.</h4>
+</article>
+<article class="row">
+<div class="large-4 columns"><h3 class="centered">Chat</h3></div>
+<div class="large-4 columns"><h3 class="centered">Audio</h3></div>
+<div class="large-4 columns"><h3 class="centered">Video</h3></div>
+</article>
+</section>
+{% endblock %}
+
+{% block footer %}
+<section class="footer-bar-frontpage">
+<article="row">
+<div class="large-12 columns"><h4 class="centered"><small>Connections is a sample application developed by Guru Labs. Copyright 2014, all rights reserved.</small></h4></div>
+</article="row"></section>
+<script src="{{ STATIC_URL }}js/chat/base.models.js"></script>
+<script src="{{ STATIC_URL }}js/chat/base.views.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.frontpage.js"></script>
+{% endblock %}
