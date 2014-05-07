@@ -2,9 +2,8 @@ from django.conf.urls import patterns, url, include
 
 from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCreateView, \
 	MessageRestView, ConversationCreateView, ConversationRestView, \
-	ProfileRestView, LoggedInTestView
+	ProfileRestView
 	
-
 
 # Provides URLs to API endpoints
 api_urlpatterns = patterns('',
@@ -14,10 +13,10 @@ api_urlpatterns = patterns('',
 		name='conversation-rest'),
 
 	# Message REST URLs
-	url(r'^conversation/(?P<cpk>\w+)/message/$', MessageCreateView.as_view(),
-		name='message-create'),
 	url(r'^conversation/(?P<cpk>\w+)/message/(?P<pk>\w+)/$', MessageRestView.as_view(),
 		name='message-rest'),
+	url(r'^conversation/(?P<cpk>\w+)/message/$', MessageCreateView.as_view(),
+		name='message-create'),
 
 	# User REST URLs
 	url(r'^user/(?P<pk>\d+)/$', UserRestView.as_view(), name='user-rest'),

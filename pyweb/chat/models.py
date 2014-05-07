@@ -14,7 +14,7 @@ class Profile(models.Model):
 	''' User profile class for service users. Provides supplementary data, avatar
 		settings, etc.
 	'''
- 	user = models.OneToOneField(User)
+ 	user = models.OneToOneField(User, blank=False)
 
 	def __str__(self):
 		return self.user.username		
@@ -42,13 +42,14 @@ class Message(models.Model):
 
 	def __str__(self):
 		# return ''.join([self.sender.user.username,self.text])
-		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.id) if s is not None])
+		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.id) \
+			if s is not None])
 
 class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
 		participants and many messages.
 	'''
-	id = models.CharField(primary_key=True, max_length=36, unique=True)
+	id = models.CharField(primary_key=True, max_length=36)
 	participants = models.ManyToManyField(User, blank=True)
 	messages = models.ManyToManyField(Message, blank=True)
 
@@ -61,7 +62,7 @@ class Conversation(models.Model):
 		# Generate conversation id if the model does not already have one
 		if not self.id: self.id = self.generateConversationId()
 		# Save model instance, in cases with duplicate IDs, generate a new ID and resave
-		def conversationsave(): super(self.__class__, self).save(*args, **kwargs)
+		def conversationsave():	super(self.__class__, self).save(*args, **kwargs)
 		def duplicateid(): self.id = self.generateConversationId()
 		retry_action(conversationsave, exception_actions={ IntegrityError : duplicateid })
 

@@ -8,6 +8,7 @@ class ProfileForm(ModelForm):
 		model = Profile
 		fields = ('id', 'user',)
 
+
 class UserCreateForm(ModelForm):
 	'''	Form used to create new user accounts.
 	'''
@@ -44,6 +45,7 @@ class UserCreateForm(ModelForm):
 		if cleaned_data.get('password') != cleaned_data.get('verify_password'):
 			raise ValidationError("The supplied passwords don't match")
 		return cleaned_data
+
 
 class UserForm(ModelForm):
 	class Meta:
