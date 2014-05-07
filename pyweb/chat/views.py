@@ -4,6 +4,7 @@ from django.shortcuts import render, render_to_response
 
 from django.core import serializers
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 
@@ -106,7 +107,7 @@ class RestView(BaseView):
 
 			if not objForm.is_valid():
 				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
+				response[API_ERROR] = dict(objForm.errors.items())
 			else:
 				objForm.save()
 				response['id'] = objForm.data['id']
@@ -190,6 +191,7 @@ class UserRestView(RestView):
 			return HttpResponseBadRequest(json.dumps(response))
 		return HttpResponse(json.dumps(response))
 
+
 class UserAuthenticateView(BaseView):
 
 	def post(self, request, *args, **kwargs):
@@ -241,7 +243,7 @@ class UserCreateView(CreateView):
 			objForm = self.form(rdata)
 			if not objForm.is_valid():
 				response[API_RESULT] = API_FAIL
-				response[API_ERROR] = API_INVALID_DATA % (str(rdata), objForm.errors)
+				response[API_ERROR] = dict(objForm.errors.items())
 			else:
 				obj = objForm.save()
 				profile = Profile(user=obj)
@@ -251,11 +253,11 @@ class UserCreateView(CreateView):
 				return HttpResponse(json.dumps(response))
 
 		except self.model.DoesNotExist:
+			print traceback.print_exc()
 			response[API_RESULT] = API_FAIL
 			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+		
 		return HttpResponseBadRequest(json.dumps(response))
-
-
 
 
 class ProfileRestView(RestView):
@@ -413,4 +415,5 @@ def application_index(request):
 def form_user_create(request):
 	return render_to_response('forms/user-create.html', {
 			'form' : UserCreateForm(),
+			'createurl' : reverse('chat:api:user-create')
 		}, context_instance=RequestContext(request))

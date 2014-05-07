@@ -41,6 +41,7 @@ INSTALLED_APPS = (
     'chat',
 )
 
+
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

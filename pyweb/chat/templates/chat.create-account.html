@@ -2,6 +2,8 @@
 
 {% block body-background %}create-connections{% endblock %}
 
+{% block pageassets %}{% csrf_token %}{% endblock %}
+
 {% block header %}
 <section class="header-bar">
 <div class="row">

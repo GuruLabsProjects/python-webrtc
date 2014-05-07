@@ -25,19 +25,45 @@ WebsocketMessenger.str2bool = function(istring) {
 	return _.contains(WebsocketMessenger._positive, istring.toLowerCase());
 }
 
+WebsocketMessenger.csrfSafeMethod = function(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+
+// Setup Ajax Requests to add the CSRF token to the headers
+$.ajaxSetup({
+    crossDomain: false, 
+    beforeSend: function(xhr, settings) {
+    	var csrftoken = $.cookie('csrftoken');
+        if (!WebsocketMessenger.csrfSafeMethod(settings.type)) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+
+// Convenience method for setting cookies
+function setPrefCookie(cookie_name, cookie_value) {
+    var edate = new Date();
+    edate.setTime(edate.getTime() + (30*24*60*60*1000)); // Expire in 30 days
+    $.cookie(cookie_name, cookie_value, {expires: edate});
+}
+
+
 WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 	// 	Base model from which all other WebsocketMessenger models inherit
 
-	// 	@property odefaults: Default parameters values which are added to the model
-	//		as part of initialization
+	//	@property createurl: URL which should be used when first creating objects
+	// 	@property updateurl: URL which should be used when updating an 
+	//		existing instance of an object
 	//	@property related (default={}): JS object which can be used to store
 	//		named collections of objects. When the model's toJSON method is called,
 	//		all objects in the collection are serialized to a JSON array
-	//	@property ovveride toJSON: Serializes model data to JSON. Includes of the IDs
+	//	@method ovveride toJSON: Serializes model data to JSON. Includes of the IDs
 	//		of collections that have been added to related
 
-	odefaults: {},
 	related: undefined,
+	createurl: undefined,
+	updateurl: undefined,
 	
 	initialize: function(attributes, options) {
 		options = options || {};
@@ -45,6 +71,8 @@ WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 		var bmodel = this;
 		// Default options
 		this.related = {};
+		this.createurl = options.createurl;
+		this.updateurl = options.updateurl;
 		// Add related model collections
 		_.each(options.related, function(rcollection, rname){
 			bmodel.addRelatedCollection(rname, rcollection);
@@ -97,7 +125,17 @@ WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 			}), 'id')
 		});
 		return mjson;
+	},
+
+	url: function() {
+		if (this.isNew()) {
+			if (_.isUndefined(this.createurl)) 
+				throw new Error('Unable to provide url, no create url defined');
+			return(this.createurl);
+		}
+		return(this.updateurl);
 	}
+
 });
 
 WebsocketMessenger.Collections.BaseModelCollection = Backbone.Collection.extend({

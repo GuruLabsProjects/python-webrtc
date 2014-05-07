@@ -15,6 +15,7 @@
 <section class="row">
 <article class="large-12 columns"><label>{{ form.email.label }}{{ form.email }}</article></section>
 </fieldset>
+<api {% if createurl %}href-create="{{ createurl }}"{% endif %} {% if updateurl %}href-update="{{ updateurl }}" {% endif %} />
 {% endblock %}
 
 {% block btntext_formsubmit %}Create Account{% endblock %}

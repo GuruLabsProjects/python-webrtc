@@ -18,6 +18,35 @@ WebsocketMessenger.form_fieldnames = function(mform) {
 	return fnames;
 }
 
+WebsocketMessenger.display_form_errors = function(fview, ferrors, etemplate) {
+	// 	Add form errors to a view
+	// 	@input fview: View which the errors should be added to
+	//	@input ferrors (JavaScript object): List of errors that should be added to the view.
+	//		Errors should be organized into lists and should be indexed to the fieldname.
+	//		Example: { 
+	//			'username' : ['This field is required', ],
+	//			'password' : ['This field is required', 'Passwords must be at least characters long']
+	//		}
+	//	@input etemplate (underscore JavaScript microtemplate): Template function which should be used
+	//		to render the errors to HTML. Should accept a object with form {'msg' : error_message }.
+
+	ferrors = ferrors || {};
+	if (!_.isFunction(etemplate)) throw new Error('The error template must be a function');
+	_.each(ferrors, function(elist, fname){
+		_.each(elist, function(emessage){
+			var etext = etemplate({ msg : emessage });
+			fview.$el.find('[name='+fname+']').after(etext);
+		});
+	});
+}
+
+WebsocketMessenger.remove_form_errors = function(fview, eselector) {
+	// Remove all error messages from a view
+	// @input fview: View from which the errors should be removed from
+	// @input eselector: Selector string which should be used for removing errors from DOM
+	fview.$el.find(eselector).remove();
+}
+
 
 // Base - Views
 
@@ -82,10 +111,14 @@ WebsocketMessenger.Views.FormView = WebsocketMessenger.Views.BaseModelView.exten
 	// 	@signal 'form:submit' : Triggered when a form has been submitted
 	// 	@signal 'form:submit:errors' params=(JSON object of errors): Triggered when an error
 	//		was found when trying to save data to the server
+	//	@signal 'form:submit:success' params=(JSON object of server response): Triggered
+	//		when the form has been submitted successfully
 
 	form_fieldnames: [],
 	form_trackchanges: true,
 	form_loaddata: true,
+
+	errormessage_save: "Unable to save changes to the model",
 
 	initialize: function(options) {
 		options = options || {};
@@ -126,13 +159,34 @@ WebsocketMessenger.Views.FormView = WebsocketMessenger.Views.BaseModelView.exten
 		'click .form-submit' : 'submitForm',
 	},
 
-	cancel: function() {
+	cancel: function(event) {
+		event.preventDefault();
 		this.trigger('form:submit:cancel');
 	},
 
-	submitForm: function() {
+	submitForm: function(event) {
+		// Submit form changes to the web server
+		event.preventDefault();
+		var mview = this;
 		this.trigger('form:submit');
-		console.log(this.model.toJSON());
+		var mchanges = this.model.changedAttributes() || {};
+		this.model.save(mchanges, {
+			error: function(model, xhr, options) {
+				// Error callback: trigger form:submit:errors with response from server
+				if (_.has(xhr.responseJSON, 'error'))
+					mview.trigger('form:submit:errors', xhr.responseJSON.error);
+				// Notify user that the form could not be submitted
+				mview.errorMessage(mview.errormessage_save);
+			},
+			success: function(model, response, options) {
+				// Success callback
+				// Update model instance with update URL
+				if (_.has(response, 'href-update')) mview.model.updateurl = response['href-update'];
+				// Update model isntance with ID generated from the server
+				if (_.has(response, 'id')) mview.model.set('id', response.id);
+				mview.trigger('form:submit:success', response);
+			}
+		});
 	},
 
 });
