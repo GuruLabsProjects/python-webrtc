@@ -190,7 +190,7 @@ class UserCreateView(BaseView):
 		return HttpResponseBadRequest(json.dumps(response))
 
 
-class ProfileRestView(RestView):
+class ProfileRestView(BaseView):
 
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
