@@ -4,6 +4,7 @@ from django.shortcuts import render, render_to_response
 
 from django.core import serializers
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 
@@ -21,8 +22,8 @@ from django.forms.models import model_to_dict
 from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
-from .forms import (UserForm, ProfileForm, MessageForm, ConversationForm,
-	MessageCreateForm, ConversationCreateForm)
+from .forms import UserForm, ProfileForm, MessageForm, ConversationForm, \
+	UserCreateForm, MessageCreateForm, ConversationCreateForm
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ class UserRestView(BaseView):
 					return HttpResponse(json.dumps(response))
 
 				else:
-					response[API_ERROR] = API_INVALID_DATA % (str(rdata), userForm.errors)
+					response[API_ERROR] = dict(userForm.errors.items())
 
 			response = self.getFailResponse()
 			return HttpResponseNotFound(json.dumps(response))
@@ -124,6 +125,7 @@ class UserRestView(BaseView):
 		except User.DoesNotExist:
 			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
 			return HttpResponseBadRequest(json.dumps(response))
+
 
 class UserAuthenticateView(BaseView):
 
@@ -179,13 +181,14 @@ class UserCreateView(BaseView):
 				response = self.getSuccessResponse(id=user.pk)
 				return HttpResponse(json.dumps(response))
 
-			else:
-				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
-					userForm.errors))
+			else: response[API_ERROR] = dict(userForm.errors.items())
 
-		except User.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
+		except self.model.DoesNotExist:
+			response[API_RESULT] = API_FAIL
+			response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+		
 		return HttpResponseBadRequest(json.dumps(response))
+
 
 class ProfileRestView(BaseView):
 
@@ -364,6 +367,19 @@ class MessageCreateView(BaseView):
 
 
 def application_index(request):
-	return render_to_response('index.html', {
+	'''	Index view for the chat application. Checks to see if a user is authenticated.
+		If a user is authenticated, the view returns the active user index page.
+		Otherwise the "create user" page is provided.
+	'''
+	vname = 'chat.create-account.html'
+	if request.user.is_authenticated(): vname = 'index.html'
+	return render_to_response(vname, {
 			'title' : 'Guru Labs Chat Demo Application',
+		}, context_instance=RequestContext(request))
+
+
+def form_user_create(request):
+	return render_to_response('forms/user-create.html', {
+			'form' : UserCreateForm(),
+			'createurl' : reverse('chat:api:user-create')
 		}, context_instance=RequestContext(request))

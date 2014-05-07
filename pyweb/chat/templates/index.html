@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 
-{% block header %}
-<h1>Messenger: A Simple Chat Client</h1>
-{% endblock %}
+<!-- Active User -->
+{% if user.is_authenticated %}
+
+
 
 {% block navigation %}
 <nav class='top-bar' data-topbar>

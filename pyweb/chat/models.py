@@ -25,10 +25,9 @@ class Message(models.Model):
 		message was sent, and a foreign key linking it to the sender
 		@raise IntegrityError if the pseudorandom message_id is not unique
 	'''
-	id = models.CharField(primary_key=True, max_length=36)
-	text = models.CharField(max_length=256, blank=False)
-	timestamp = models.DateTimeField(default=datetime.datetime.now,
-		verbose_name='date submitted')
+	id = models.CharField(primary_key=True, max_length=36, unique=True)
+	text = models.CharField(max_length=256)
+	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='Date Sent')
 	sender = models.ForeignKey(User)
 
 	def generateMessageId(self): return uuid.uuid4().hex
