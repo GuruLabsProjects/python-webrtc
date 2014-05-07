@@ -14,7 +14,7 @@ class Profile(models.Model):
 	''' User profile class for service users. Provides supplementary data, avatar
 		settings, etc.
 	'''
- 	user = models.OneToOneField(User)
+ 	user = models.OneToOneField(User, blank=False)
 
 	def __str__(self):
 		return self.user.username		
@@ -25,8 +25,8 @@ class Message(models.Model):
 		message was sent, and a foreign key linking it to the sender
 		@raise IntegrityError if the pseudorandom message_id is not unique
 	'''
-	id = models.CharField(primary_key=True, max_length=36, unique=True)
-	text = models.CharField(max_length=256)
+	id = models.CharField(primary_key=True, max_length=36)
+	text = models.CharField(max_length=256, blank=False)
 	timestamp = models.DateTimeField(default=datetime.datetime.now,
 		verbose_name='date submitted')
 	sender = models.ForeignKey(User)
@@ -50,7 +50,7 @@ class Conversation(models.Model):
 	''' Conversation represents one conversation that's taking place.  It has many
 		participants and many messages.
 	'''
-	id = models.CharField(primary_key=True, max_length=36, unique=True)
+	id = models.CharField(primary_key=True, max_length=36)
 	participants = models.ManyToManyField(User, blank=True)
 	messages = models.ManyToManyField(Message, blank=True)
 

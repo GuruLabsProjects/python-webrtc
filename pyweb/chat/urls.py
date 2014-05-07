@@ -4,8 +4,6 @@ from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCr
 	MessageRestView, ConversationCreateView, ConversationRestView, \
 	ProfileRestView
 	
-
-
 api_urlpatterns = patterns('',
 	# Conversation REST URLs
     url(r'^conversation/$', ConversationCreateView.as_view(), name='conversation-create'),
