@@ -6,7 +6,9 @@ from django.core import serializers
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseRedirect
+
+from django.contrib.auth import logout
 
 from django.views.generic import View
 from django.template import Context, loader, RequestContext
@@ -360,11 +362,17 @@ def application_index(request):
 		If a user is authenticated, the view returns the active user index page.
 		Otherwise the "create user" page is provided.
 	'''
-	vname = 'chat.create-account.html'
-	if request.user.is_authenticated(): vname = 'index.html'
-	return render_to_response(vname, {
+	return render_to_response(
+		'chat.active-user.html' if request.user.is_authenticated() else 'chat.create-account.html', {
 			'title' : 'Guru Labs Chat Demo Application',
 		}, context_instance=RequestContext(request))
+
+
+def chat_logout(request):
+	'''	Log the user out of the application, return to the home page
+	'''
+	logout(request)
+	return HttpResponseRedirect(reverse('chat:appindex'))
 
 
 def form_user_create(request):
@@ -372,6 +380,7 @@ def form_user_create(request):
 			'form' : UserCreateForm(),
 			'createurl' : reverse('chat:api:user-create')
 		}, context_instance=RequestContext(request))
+
 
 def form_user_auth(request):
 	return render_to_response('forms/user-auth.html', {

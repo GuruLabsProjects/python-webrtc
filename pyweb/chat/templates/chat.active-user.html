@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block pageassets %}{% csrf_token %}{% endblock %}
+
+{% block header %}
+<section class="header-bar">
+<div class="row"><div class="small-12 columns">
+<a class="button right small" href="{% url 'chat:logout' %}">Logout</a>
+</div></div>
+</section>
+{% endblock %}

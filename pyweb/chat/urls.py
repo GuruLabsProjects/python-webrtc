@@ -1,8 +1,9 @@
 from django.conf.urls import patterns, url, include
 
+
 from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCreateView, \
 	MessageRestView, ConversationCreateView, ConversationRestView, \
-	ProfileRestView
+	ProfileRestView, logout
 	
 
 # Provides URLs to API endpoints
@@ -43,4 +44,5 @@ urlpatterns = patterns('chat.views',
 	url(r'^$', 'application_index', name='appindex'),
 	url(r'^api/', include(api_urlpatterns, namespace='api')),
 	url(r'^forms/', include(form_urlpatterns, namespace='forms')),
+	url(r'^logout/$', 'chat_logout', name='logout'),
 )
