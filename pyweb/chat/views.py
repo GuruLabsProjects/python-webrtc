@@ -36,12 +36,18 @@ API_INVALID_DATA = "invalid data: (%s) - errors:(%s)"
 API_BAD_PK = "id %s does not exist (%s)"
 
 class BaseView(View):
-	def getFailResponse(self, error=None):
+	# def getFailResponse(self, error):
+	# 	# response = {}
+	# 	# response[API_RESULT] = API_FAIL
+	# 	# if error:
+	# 	# 	response[API_ERROR] = error
+	# 	return json.dumps(model_to_dict(error))
+
+	def getFormErrorResponse(self, form):
 		response = {}
-		response[API_RESULT] = API_FAIL
-		if error:
-			response[API_ERROR] = error
-		return response
+		response['status'] = 'fail'
+		response['error'] = dict(form.errors.items())
+		return HttpResponseBadRequest(json.dumps(response))
 
 	def getSuccessResponse(self, **kwargs):
 		response = {}
@@ -50,11 +56,8 @@ class BaseView(View):
 			response[str(key)] = value
 		return response
 
-	def invalidRequest(self, error=''):
-		error = self.__class__.__name__
-		response = self.getFailResponse(str(' : '.join([str(traceback.format_exc()),
-			error])))
-		return HttpResponseBadRequest(json.dumps(response))
+	def invalidRequest(self):
+		return HttpResponseBadRequest()
 
 	def get(self, request, *args, **kwargs):
 		return self.invalidRequest()
@@ -79,8 +82,8 @@ class UserRestView(BaseView):
 			return HttpResponse(json.dumps(model_to_dict(obj), cls=DateTimeAwareEncoder),
 				content_type='application/json')
 
-		except User.DoesNotExist:
-			return HttpResponseNotFound(json.dumps(self.getFailResponse()))
+		except User.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
@@ -98,14 +101,12 @@ class UserRestView(BaseView):
 					return HttpResponse(json.dumps(response))
 
 				else:
-					response[API_ERROR] = dict(userForm.errors.items())
+					return self.getFormErrorResponse(userForm)
 
-			response = self.getFailResponse()
-			return HttpResponseNotFound(json.dumps(response))
+			return HttpResponseBadRequest()
 
-		except User.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
-		return HttpResponseBadRequest(json.dumps(response))
+		except User.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
@@ -118,13 +119,11 @@ class UserRestView(BaseView):
 				response = self.getSuccessResponse(id=kwargs['pk'])
 				return HttpResponse(json.dumps(response))
 
-			response = self.getFailResponse()
 			# response[API_ERROR] = "%s vs %s" % (request.user.pk, kwargs['pk'], )
-			return HttpResponseNotFound(json.dumps(response))
+			return HttpResponseBadRequest()
 
-		except User.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], User.__name__))
-			return HttpResponseBadRequest(json.dumps(response))
+		except User.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 
 class UserAuthenticateView(BaseView):
@@ -153,17 +152,13 @@ class UserAuthenticateView(BaseView):
 				else:
 					raise ValidationError("Invalid username and/or password")
 			else:
-				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
-					authForm.errors))
+				return self.getFormErrorResponse(authForm)
 
-		except User.DoesNotExist:
-			response = self.getFailResponse()
-			return HttpResponseNotFound(json.dumps(response))
-			# response[API_ERROR] = API_BAD_PK % (kwargs['pk'], self.model.__name__)
+		except User.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 		except ValidationError as err:
-			response = self.getFailResponse(err)
-		return HttpResponseBadRequest(json.dumps(response))
+			return HttpResponseNotFound(json.dumps(err.message))
 
 
 class UserCreateView(BaseView):
@@ -171,22 +166,17 @@ class UserCreateView(BaseView):
 	def post(self, request, *args, **kwargs):
 		rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 		response = {}
-		try:
-			userForm = UserCreateForm(rdata)
+		userForm = UserCreateForm(rdata)
 
-			if userForm.is_valid():
-				user = userForm.save()
-				profile = Profile(user=user)
-				profile.save()
-				response = self.getSuccessResponse(id=user.pk)
-				return HttpResponse(json.dumps(response))
+		if userForm.is_valid():
+			user = userForm.save()
+			profile = Profile(user=user)
+			profile.save()
+			response = self.getSuccessResponse(id=user.pk)
+			return HttpResponse(json.dumps(response))
 
-			else: response[API_ERROR] = dict(userForm.errors.items())
-
-		except self.model.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
-				self.model.__name__))		
-		return HttpResponseBadRequest(json.dumps(response))
+		else: 
+			return self.getFormErrorResponse(userForm)
 
 
 class ProfileRestView(BaseView):
@@ -198,9 +188,8 @@ class ProfileRestView(BaseView):
 			return HttpResponse(json.dumps(model_to_dict(profile),
 				cls=DateTimeAwareEncoder), content_type='application/json')
 
-		except Profile.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Profile.__name__))
-			return HttpResponseBadRequest(json.dumps(response))
+		except Profile.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
@@ -211,19 +200,18 @@ class ProfileRestView(BaseView):
 			profileForm = ProfileForm(rdata, instance=profile)
 
 			# ensure the user is updating him/herself only 
-			if profileForm.is_valid() and profile.user.pk == rdata['user']:
+			if profile.user.pk == rdata['user']:
+				if profileForm.is_valid():
 
-				profileForm.save()
-				response = self.getSuccessResponse(id=profileForm.data['id'])
-				return HttpResponse(json.dumps(response))
+					profileForm.save()
+					response = self.getSuccessResponse(id=profileForm.data['id'])
+					return HttpResponse(json.dumps(response))
 
-			else:
-				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
-					profileForm.errors))
-
-		except Profile.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Profile.__name__))
-		return HttpResponseBadRequest(json.dumps(response))
+				else: 
+					return self.getFormErrorResponse(profileForm)
+			return HttpResponseNotFound()
+		except Profile.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 class ConversationRestView(BaseView):
 
@@ -243,14 +231,10 @@ class ConversationRestView(BaseView):
 				return HttpResponse(json.dumps(response, cls=DateTimeAwareEncoder),
 					content_type='application/json')
 			else:
-				response = self.getFailResponse()
-				# response[API_RESULT] = 'user doesnt belong in that convo'
-				return HttpResponseNotFound(json.dumps(response))
+				return HttpResponseNotFound("")
 
-		except Conversation.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
-				Conversation.__name__))
-			return HttpResponseBadRequest(json.dumps(response))
+		except Conversation.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
@@ -262,14 +246,10 @@ class ConversationRestView(BaseView):
 				convoObj.delete()
 				response = self.getSuccessResponse(id=kwargs['pk'])
 			else:
-				response = self.getFailResponse()
-				# response[API_RESULT] = 'user doesnt belong in that convo'
-				return HttpResponseNotFound(json.dumps(response))
+				return HttpResponseNotFound()
 
-		except Conversation.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
-				Conversation.__name__))
-			return HttpResponseBadRequest(json.dumps(response))
+		except Conversation.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 		return HttpResponse(json.dumps(response))
 
 class ConversationCreateView(BaseView):
@@ -287,13 +267,10 @@ class ConversationCreateView(BaseView):
 				return HttpResponse(json.dumps(response))
 
 			else:
-				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
-					convoForm.errors))
+				return self.getFormErrorResponse(convoForm)
 
-		except Conversation.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'],
-				Conversation.__name__))
-		return HttpResponseBadRequest(json.dumps(response))
+		except Conversation.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 class MessageRestView(BaseView):
 
@@ -308,13 +285,11 @@ class MessageRestView(BaseView):
 
 				return HttpResponse(json.dumps(model_to_dict(msg),
 					cls=DateTimeAwareEncoder), content_type='application/json')
+			return HttpResponseNotFound()	
 
-			response = self.getFailResponse()
-			return HttpResponseNotFound(json.dumps(response))	
-
-		except Message.DoesNotExist:
-			response = self.getFailResponse()
-			return HttpResponseBadRequest(json.dumps(response))
+		except Message.DoesNotExist as err:
+			# the message is not in a conversation that they're requesting it for
+			return HttpResponseNotFound() 
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
@@ -330,11 +305,9 @@ class MessageRestView(BaseView):
 					response = self.getSuccessResponse(id=kwargs['pk'])
 					return HttpResponse(json.dumps(response))
 
-			response = self.getFailResponse()
-			return HttpResponseNotFound(json.dumps(response))
-		except Message.DoesNotExist:
-			response = self.getFailResponse(API_BAD_PK % (kwargs['pk'], Message.__name__))
-			return HttpResponseBadRequest(json.dumps(response))
+			return HttpResponseNotFound()
+		except Message.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 class MessageCreateView(BaseView):
 
@@ -346,8 +319,7 @@ class MessageCreateView(BaseView):
 			msgForm = MessageForm(rdata)
 			conversation = Conversation.objects.get(pk=kwargs['cpk'])
 			if not msgForm.is_valid():
-				response = self.getFailResponse(API_INVALID_DATA % (str(rdata),
-					msgForm.errors))
+				return self.getFormErrorResponse(msgForm)
 
 			elif request.user in conversation.participants.all():
 				obj = msgForm.save()
@@ -357,12 +329,9 @@ class MessageCreateView(BaseView):
 				return HttpResponse(json.dumps(response))
 
 			else:
-				response = self.getFailResponse()
-				return HttpResponseNotFound(json.dumps(response))
-		except Message.DoesNotExist:
-			response = self.getFailResponse(' - '.join([API_BAD_PK % (kwargs['pk'],
-				Message.__name__), (API_BAD_PK % (kwargs['cpk']))]))
-		return HttpResponseBadRequest(json.dumps(response))
+				return HttpResponseNotFound()
+		except Message.DoesNotExist as err:
+			return HttpResponseNotFound(json.dumps(err.message))
 
 
 def application_index(request):

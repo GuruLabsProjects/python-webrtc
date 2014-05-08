@@ -55,10 +55,8 @@ def login(client, username='guru', password='work', user=None):
 		content_type='application/json')
 	rdata = json.loads(response.content)
 
-	if rdata[API_RESULT] != API_SUCCESS:
-		raise Exception("Error logging in %s" % (rdata[API_ERROR]))
 	if response.status_code != 200:
-		raise Exception("Error logging in")
+		raise Exception("Error logging in %s" % response.content)
 	return rdata
 
 
@@ -154,7 +152,6 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content, cls=DateTimeAwareDecoder)
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
 		self.assertEquals(response.status_code, 404)
 
 	def testPutSuccess(self):
@@ -175,7 +172,7 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
+		self.assertEquals(response.status_code, 200)
 		logger.log(2, response.content)
 		self.assertEquals(User.objects.get(pk=self.user.pk).email, userDict['email'])
 
@@ -197,13 +194,12 @@ class UserViewTests(TestCase):
 		response = self.client.put(reverse('chat:api:user-rest', args=(invalidPk,)),
 		 data=jsonData, content_type='application/json')
 
-		self.assertEquals(response.status_code, 404)
+		self.assertEquals(response.status_code, 400)
 
 	def testUserAuthenticate(self):
 		''' tests the login method to ensure it's working
 		'''
 		rdata = login(self.client)
-		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
 
 
 	def testUserRegisterSuccess(self):
@@ -226,7 +222,7 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
+		self.assertEquals(response.status_code, 200)
 		self.assertEquals(count + 1, len(User.objects.all()))
 		self.assertEquals(countProfiles + 1, len(Profile.objects.all()))
 		try:
@@ -256,7 +252,7 @@ class UserViewTests(TestCase):
 		rdata = json.loads(response.content)
 
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 400)
 		self.assertEquals(count, len(User.objects.all()))
 
 	def testUserRegisterFailUnuniqueUsername(self):
@@ -281,7 +277,7 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 400)
 		self.assertEquals(count, len(User.objects.all()))
 		self.assertEquals(countProfiles, len(Profile.objects.all()))
 
@@ -316,8 +312,7 @@ class UserViewTests(TestCase):
 		response = self.client.delete(reverse('chat:api:user-rest',
 			args=(invalidPk, )), content_type='application/json')
 
-		rdata = json.loads(response.content)
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 400)
 		self.assertEquals(len(User.objects.all()), count)
 
 
@@ -340,7 +335,7 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 400)
 		self.assertEquals(count, len(User.objects.all()))
 
 
@@ -353,7 +348,7 @@ class ProfileViewTests(TestCase):
 
 	def setUp(self):
 		# Create test user
-		self.user = User.objects.create_user(username=username)
+		self.user = User.objects.create_user(username=username, password='work')
 		self.profile = Profile(user=self.user)
 		self.user.save()
 		self.profile.save()
@@ -380,11 +375,7 @@ class ProfileViewTests(TestCase):
 	
 		rdata = json.loads(response.content, cls=DateTimeAwareDecoder)
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
-		errMsg = "Invalid response - got '%s' when I should have got '%s' " % \
-			(rdata[API_ERROR],"id 9999 does not exist (Profile)", )
-		self.assertTrue(rdata[API_ERROR] ==  
-			"id 9999 does not exist (Profile)", errMsg)
+		self.assertEquals(response.status_code, 404)
 
 	def testGetNotLoggedIn(self):
 		# login(self.client)
@@ -405,23 +396,21 @@ class ProfileViewTests(TestCase):
 		self.assertEqual(userForm.is_valid(), True)
 
 	def testPutSuccess(self):
-		login(self.client)
+		#this test doesnt do anything for now but make sure a valid response is sent back
+		#	right now the profile class can't really be updated with anything...
+		login(self.client, user=self.user, password='work')
 
-		user = User.objects.create_user(username='another_user')
-		user.save()
-		self.profile.user = user
 		profileDict = model_to_dict(self.profile)
 		jsonData = json.dumps(profileDict, cls=DateTimeAwareEncoder)
 
 		response = self.client.put(reverse('chat:api:profile-rest',
 			args=(self.user.pk, )), data=jsonData, content_type='application/json')
 
+		self.assertEquals(response.status_code, 200)
+
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
-		self.assertNotEquals(Profile.objects.get(pk=self.profile.pk).user.pk,
-			self.user.pk)
-		self.assertEquals(Profile.objects.get(pk=self.profile.pk).user.pk, user.pk)
+
 
 	def testPutFailInvalid(self):
 		''' Tests if the id of the profile sent matches the id of the actual user tied to
@@ -439,9 +428,7 @@ class ProfileViewTests(TestCase):
 		response = self.client.put(reverse('chat:api:profile-rest',
 			args=(self.user.pk, )), data=jsonData, content_type='application/json')
 
-		rdata = json.loads(response.content)
-
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 404)
 
 	def testPutFailure(self):
 		''' Invalid profile id sent, should fail and not touch the profiles.
@@ -459,7 +446,7 @@ class ProfileViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 404)
 		self.assertEquals(Profile.objects.get(pk=self.profile.pk).user.pk, self.user.pk)
 		self.assertNotEquals(Profile.objects.get(pk=self.profile.pk).user.pk, user.pk)
 
@@ -521,7 +508,7 @@ class MessageViewTest(TestCase):
 		response = self.client.get(reverse('chat:api:message-rest',
 			args=(self.conversation.pk, m.pk, )), content_type='application/json')
 
-		self.assertEquals(response.status_code, 400)
+		self.assertEquals(response.status_code, 404)
 
 		# user isn't in conversation, but message is
 		login(self.client, username='newUser', password='work')
@@ -536,10 +523,7 @@ class MessageViewTest(TestCase):
 		response = self.client.get(reverse('chat:api:message-rest',
 			args=(self.conversation.pk, 'bogusmessageid', )),
 			content_type='application/json')
-
-		response_message = json.loads(response.content, cls=DateTimeAwareDecoder)
-
-		self.assertEquals(response_message[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 404)
 
 		with self.assertRaises(Message.DoesNotExist):
 			msg = Message.objects.get(pk='bogusmessageid')
@@ -569,9 +553,8 @@ class MessageViewTest(TestCase):
 			)
 
 		rdata = json.loads(response.content)
-		self.assertEquals(response.status_code, 400)
+		self.assertEquals(response.status_code, 404)
 		self.assertEquals(len(Message.objects.all()), 2)
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
 
 	def testPut(self):
 		#this should always fail
@@ -631,7 +614,7 @@ class MessageViewTest(TestCase):
 
 		rdata = json.loads(response.content)
 
-		self.assertEquals(rdata[API_RESULT], API_FAIL)
+		self.assertEquals(response.status_code, 400)
 		self.assertEquals(count, len(Message.objects.all()))
 
 
@@ -719,9 +702,6 @@ class ConversationViewTests(TestCase):
 		response = self.client.put(reverse('chat:api:conversation-rest', args=(
 			str(convo.pk), ) ), data=jsonData, content_type='application/json')
 
-		rdata = json.loads(response.content)
-
-		self.assertTrue(rdata[API_RESULT], API_FAIL)
 		self.assertTrue(response.status_code == 400)
 
 	def testDeleteFail(self):
@@ -754,4 +734,3 @@ class ConversationViewTests(TestCase):
 
 		self.assertEquals(count - 1, len(Conversation.objects.all()))
 		self.assertEquals(response.status_code, 200)
-		self.assertEquals(rdata[API_RESULT], API_SUCCESS)
