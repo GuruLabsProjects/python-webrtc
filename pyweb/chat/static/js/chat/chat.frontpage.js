@@ -1,9 +1,11 @@
-// FrontPage Manager View
 var WebsocketMessenger = WebsocketMessenger || {
 	Models: {},
 	Collections: {},
 	Views: {},
 }
+
+
+// FrontPage Manager View
 
 WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.extend({
 	// 	Backbone.js view used to manage the front page of the application
@@ -28,6 +30,7 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 	user_msg_accountcreated: "User account created successfully, you can now log in to the site",
 
 	initialize: function(options) {
+		// Initialize frontpage form, connect form events
 		options = options || {};
 		
 		// Set view default options
@@ -62,8 +65,9 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 				+ 'for modal content');
 	},
 
-	getAuthUserForm: function() {
+	getAuthUserForm: function(event) {
 		// Retrieve the user auth form from the web server
+		event.preventDefault();
 		var mview = this;
 		if (_.isUndefined(this.url_form_authuser))
 			throw new Error('No URL for retrieving the auth-user form was provided');
@@ -85,7 +89,7 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 		});
 	},
 
-	getCreateUserForm: function() {
+	getCreateUserForm: function(event) {
 		// 	Retrieve the create user form from the web server
 		// 	This method provides an example of how a Backbone view can wrap
 		// 	a JavaScript asset and make it easier to work with. Simple callbacks
@@ -93,6 +97,7 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 		// 	view methods to respond as well as external listeners that may be 
 		// 	interested in responding to events (such as if the view fails to
 		// 	retrieve the form).
+		event.preventDefault();
 		var mview = this;
 		if (_.isUndefined(this.url_form_createuser))
 			throw new Error('No URL for retrieving the create-user form was provided');

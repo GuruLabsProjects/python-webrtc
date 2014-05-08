@@ -7,7 +7,34 @@
 <div class="row">
 <div class="medium-8 columns"><h2>Connections</h2></div>
 <div class="medium-4 columns">
-<a class="button right small" href="{% url 'chat:logout' %}">Logout</a>
+<ul class="button-group right">
+<li><a id="btn-create-conversation" class="button small" href="#">Create New Conversation</a></li>
+<li><a class="button small secondary" href="{% url 'chat:logout' %}">Logout</a></li>
+</ul>
 </div></div>
 </section>
+{% endblock %}
+
+{% block content %}
+<section class="row">
+	<div id="chat-user-list" class="small-4 columns">
+		<h3>Active Users</h3>
+	</div>
+	<div id="conversation-user-list" class="small-8 columns">
+		<h3>Conversations</h3>
+	</div>
+</section>
+{% endblock %}
+
+{% block footer %}
+<!-- Modal Dialog Content -->
+<article id="modal-content" class="modal-reveal" data-reveal></article>
+<!-- Guru Labs API URLs -->
+<api conversation-create="{% url 'chat:api:conversation-create' %}"></api>
+<!-- Message View JavaScript Templates -->
+{% include 'js-templates/chat.html' %}
+<!-- Page Assets -->
+<script src="{{ STATIC_URL }}js/chat/base.models.js"></script>
+<script src="{{ STATIC_URL }}js/chat/base.views.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.main.js"></script>
 {% endblock %}

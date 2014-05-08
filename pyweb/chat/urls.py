@@ -10,8 +10,7 @@ from .views import UserAuthenticateView, UserCreateView, UserRestView, MessageCr
 api_urlpatterns = patterns('',
 	# Conversation REST URLs
     url(r'^conversation/$', ConversationCreateView.as_view(), name='conversation-create'),
-	url(r'^conversation/(?P<pk>\w+)/$', ConversationRestView.as_view(),
-		name='conversation-rest'),
+	url(r'^conversation/(?P<pk>\w+)/$', ConversationRestView.as_view(), name='conversation-rest'),
 
 	# Message REST URLs
 	url(r'^conversation/(?P<cpk>\w+)/message/(?P<pk>\w+)/$', MessageRestView.as_view(),
