@@ -27,7 +27,6 @@ api_urlpatterns = patterns('',
 
 	# Profile REST URLs
 	url(r'^user/(?P<pk>\w+)/profile/$', ProfileRestView.as_view(), name='profile-rest'),
-
 	url(r'^test/(?P<pk>\d+)$', ProfileRestView.as_view(), name='login-test')
 )
 
