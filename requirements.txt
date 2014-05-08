@@ -1,1 +1,3 @@
 django
+twisted
+configobj
