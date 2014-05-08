@@ -55,6 +55,9 @@ ROOT_URLCONF = 'pyweb.urls'
 
 WSGI_APPLICATION = 'pyweb.wsgi.application'
 
+MESSAGE_SERVER = '127.0.0.1'
+MESSAGE_PORT = '1789'
+
 
 # Database
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases

@@ -223,7 +223,7 @@ $(document).ready(function(){
 	// Initialize foundation and plugins
 	$(document).foundation();
 
-	// Retrieve page api reference
+	// UI References
 	var $apiref = $('api');
 	var $modalref = $('#modal-content');
 

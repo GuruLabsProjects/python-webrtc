@@ -30,11 +30,13 @@
 <!-- Modal Dialog Content -->
 <article id="modal-content" class="modal-reveal" data-reveal></article>
 <!-- Guru Labs API URLs -->
-<api conversation-create="{% url 'chat:api:conversation-create' %}"></api>
+<api conversation-create="{% url 'chat:api:conversation-create' %}" 
+	mserver="{{ message_server }}" mport="{{ message_port }}"></api>
 <!-- Message View JavaScript Templates -->
 {% include 'js-templates/chat.html' %}
 <!-- Page Assets -->
 <script src="{{ STATIC_URL }}js/chat/base.models.js"></script>
 <script src="{{ STATIC_URL }}js/chat/base.views.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.messenger.js"></script>
 <script src="{{ STATIC_URL }}js/chat/chat.main.js"></script>
 {% endblock %}

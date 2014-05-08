@@ -1,12 +1,14 @@
 import uuid, json, logging, datetime, traceback
 
+from django.conf import settings
 from django.shortcuts import render, render_to_response
 
 from django.core import serializers
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseBadRequest, \
+	HttpResponseNotFound, HttpResponseRedirect
 
 from django.contrib.auth import logout
 
@@ -365,6 +367,8 @@ def application_index(request):
 	return render_to_response(
 		'chat.active-user.html' if request.user.is_authenticated() else 'chat.create-account.html', {
 			'title' : 'Guru Labs Chat Demo Application',
+			'message_server' : getattr(settings, 'MESSAGE_SERVER', '127.0.0.1'),
+			'message_port' : getattr(settings, 'MESSAGE_PORT', '1789')
 		}, context_instance=RequestContext(request))
 
 

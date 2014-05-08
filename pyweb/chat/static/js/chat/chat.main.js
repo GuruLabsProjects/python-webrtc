@@ -55,6 +55,13 @@ $(document).ready(function() {
 	var tmpl_notification = _.template($('#template-notification').html());
 	var tmpl_formerror = _.template($('#template-formerror').html());
 
+	// Create connection to websocket server
+	var wsmessenger = new WebsocketMessenger.MessengerConnection({
+		server: $apiref.attr('mserver'),
+		port: $apiref.attr('mport'),
+	});
+	wsmessenger.connect();
+
 	// Create the page view
 	var cmanager = new WebsocketMessenger.Views.ChatManager({
 		el: $('body'),

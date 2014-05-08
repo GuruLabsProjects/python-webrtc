@@ -14,13 +14,31 @@ class MessengerConnection(LineReceiver):
 
 	def __init__(self, factory):
 		self.factory = factory
+		self.ctype = None
+		self.ipaddr = None
+		self.cport = None
 
 	def connectionMade(self):
-		log.msg('Client connection created')
+		'''	Event fired when a client connection is made to the server.
+			Can be used to provide an authentication challenge, or to provide
+			data that might be used by the client when first creating a connection.
+		'''
+		cpeer = self.transport.getPeer()
+		self.ipaddr = cpeer.host
+		self.port = cpeer.port
+		log.msg('Client connection created: %s:%s' % (str(self.ipaddr), str(self.port)))
 
-	def dataReceived(self, data): self.sendLine(data)
+	def dataReceived(self, data):
+		''' Event fired when the server receives data sent by the client
+		'''
+		log.msg('Data received: ' + data)
+		self.sendLine(data)
 
-	def connectionLost(self, reason): pass
+	def connectionLost(self, reason): 
+		'''	Event fired when a client connection is closed.
+			Useful for performing cleanup and removing persistent objects from the factory.
+		'''
+		pass
 
 
 class MessengerConnectionFactory(ServerFactory):
