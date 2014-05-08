@@ -4,6 +4,7 @@
 {% block formbuttons %}
 <a href="#" class="button right form-submit right">{% block btntext_formsubmit %}Submit{% endblock %}</a>
 <a href="#" class="button secondary small form-cancel">{% block btntext_formcancel %}Cancel {% endblock %}</a>
+<api href-authenticate="{% url 'chat:api:user-authenticate' %}"></api>
 {% endblock %}
 </section>
 </div>

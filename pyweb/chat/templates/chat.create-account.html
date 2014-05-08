@@ -11,7 +11,7 @@
 	<div class="small-12 medium-8 columns">
 		<ul class="button-group right">
 			<li><a id="btn-create-account" class="button small">Create Account</a></li>
-			<li><a class="button secondary small">Sign In</a></li>
+			<li><a id="btn-login" class="button secondary small">Sign In</a></li>
 		</ul>
 	</div>
 </div>
@@ -39,7 +39,7 @@
 <!-- Model Dialog Content -->
 <article id="modal-content" class="reveal-modal" data-reveal></article>
 <!-- Guru Labs API URLs -->
-<api user-create="{% url 'chat:forms:user-create' %}" ></api>
+<api user-create="{% url 'chat:forms:user-create' %}" user-authenticate="{% url 'chat:forms:user-authenticate' %}"></api>
 <!-- JavaScript Template Files -->
 {% include 'js-templates/chat.html' %}
 <!-- Front Page Application URLs -->

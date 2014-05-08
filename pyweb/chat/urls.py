@@ -34,6 +34,7 @@ api_urlpatterns = patterns('',
 form_urlpatterns = patterns('chat.views',
 	# Create User Form
 	url(r'^user/create/$', 'form_user_create', name='user-create'),
+	url(r'^user/auth/$', 'form_user_auth', name='user-authenticate'),
 )
 
 # Main URL structure for the application

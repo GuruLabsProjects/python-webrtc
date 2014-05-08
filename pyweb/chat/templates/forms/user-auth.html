@@ -1,0 +1,12 @@
+{% extends 'forms/forms.base-ajax.html' %}
+
+{% block formcontent %}
+<section class="row">
+<div class="medium-4 columns"><h5>{{ form.username.label }}</h5></div>
+<div class="medium-8 columns">{{ form.username }}</div>
+</section>
+<section class="row">
+<div class="medium-4 columns"><h5>{{ form.password.label }}</h5></div>
+<div class="medium-8 columns">{{ form.password }}</div>
+</section>
+{% endblock %}

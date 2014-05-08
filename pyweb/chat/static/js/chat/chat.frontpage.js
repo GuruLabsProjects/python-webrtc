@@ -16,6 +16,8 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 	//		The user model and view are passed as input arguments for the signal.
 
 	url_form_createuser: undefined,
+	url_form_authuser: undefined,
+
 	$modalcontent: undefined,
 	
 	tmpl_notification: undefined,
@@ -36,6 +38,7 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 		this.form_errors_selectorstring = options.form_errors_selectorstring;
 		this.user_msg_accountcreated = options.user_msg_accountcreated;
 		this.url_form_createuser = options.url_form_createuser;
+		this.url_form_authuser = options.url_form_authuser;
 		this.$modalcontent = options.modalcontent;
 		
 		// View HTML microtemplates
@@ -44,10 +47,12 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 		
 		// Set internal view signals/handlers
 		this.listenTo(this, 'user:form:create:retrieved', this.initCreateUserForm.bind(this));
+		this.listenTo(this, 'user:form:auth:retrieved', this.initAuthUserForm.bind(this));
 	},
 
 	events: {
 		'click #btn-create-account' : 'getCreateUserForm',
+		'click #btn-login' : 'getAuthUserForm',
 	},
 
 	checkModalContentElement: function() {
@@ -55,6 +60,29 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 			throw new Error(
 				'Please provide a reference to the element which should be used '
 				+ 'for modal content');
+	},
+
+	getAuthUserForm: function() {
+		// Retrieve the user auth form from the web server
+		var mview = this;
+		if (_.isUndefined(this.url_form_authuser))
+			throw new Error('No URL for retrieving the auth-user form was provided');
+		this.checkModalContentElement();
+		this.$modalcontent.foundation('reveal', 'open', {
+			url: mview.url_form_authuser,
+			success: function(data) {
+				mview.$modalcontent.one('opened', function(){
+					mview.trigger('user:form:auth:retrieved', data);
+				});
+			},
+			error: function(data) {
+				var emessage = 'Unable to retrieve user authentication form';
+				if (_.isFunction(mview.tmpl_notification)) {
+					emessage = mview.tmpl_notification({ msg: emessage });
+				}
+				mview.errorMessage(emessage);
+			}
+		});
 	},
 
 	getCreateUserForm: function() {
@@ -84,10 +112,57 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 				mview.errorMessage(emessage);
 			}, 
 		});
-	}, 
+	},
+
+	initAuthUserForm: function(data) {
+		// Initialize the authentication form
+		var mview = this;
+
+		this.checkModalContentElement();
+
+		// Form UI references
+		var $apiref = this.$modalcontent.find('api');
+
+		// Create a user model and view for authentication details
+		var amodel = new WebsocketMessenger.Models.BaseModel({}, {
+			createurl: $apiref.attr('href-authenticate'),
+		});
+		var aview = new WebsocketMessenger.Views.FormView({
+			el: this.$modalcontent.find('.formcontent'),
+			model: amodel,
+			form_fieldnames: WebsocketMessenger.form_fieldnames(this.$modalcontent),
+		});
+
+		// Add event handlers for form submission events
+		aview.listenTo(aview, 'form:submit:cancel', function(){
+			mview.$modalcontent.foundation('reveal', 'close');
+		});
+
+		// Destroy the user model after the dialog is closed
+		mview.$modalcontent.one('closed', function() { amodel.trigger('destroy'); });
+
+		// Remove form elements and events after model is destroyed
+		aview.listenTo(amodel, 'destroy', aview.removeView.bind(aview));
+
+		// Remove form errors
+		aview.listenTo(aview, 'form:submit', function(){
+			WebsocketMessenger.remove_form_errors(aview, mview.form_errors_selectorstring);
+		});
+
+		// Display form errors
+		aview.listenTo(amodel, 'form:submit:errors', function(ferrors){
+			WebsocketMessenger.display_form_errors(aview, ferrors, mview.tmpl_formerrors);
+		});
+
+		// Close form dialog after user authenticated
+		aview.listenTo(aview, 'form:submit:success', function(){
+			mview.$modalcontent.foundation('reveal', 'close');
+			window.location.href = '/'
+		});
+	},
 
 	initCreateUserForm: function(rdata) {
-		// Initialize the user form retrieved by the view
+		// Initialize the user form
 		var mview = this;
 		
 		this.checkModalContentElement();
@@ -134,7 +209,7 @@ WebsocketMessenger.Views.FrontPageView = WebsocketMessenger.Views.BaseView.exten
 		});
 
 		mview.trigger('user:form:create:init', umodel, uview);
-	}
+	},
 
 });
 
@@ -155,6 +230,7 @@ $(document).ready(function(){
 	var fpview = new WebsocketMessenger.Views.FrontPageView({
 		el: $('body'),
 		url_form_createuser: $apiref.attr('user-create'),
+		url_form_authuser: $apiref.attr('user-authenticate'),
 		tmpl_notification: tmpl_notification,
 		tmpl_formerrors: tmpl_formerror,
 		modalcontent: $modalref,

@@ -372,3 +372,9 @@ def form_user_create(request):
 			'form' : UserCreateForm(),
 			'createurl' : reverse('chat:api:user-create')
 		}, context_instance=RequestContext(request))
+
+def form_user_auth(request):
+	return render_to_response('forms/user-auth.html', {
+			'form' : AuthenticationForm(),
+			'createurl' : reverse('chat:api:user-authenticate')
+		}, context_instance=RequestContext(request))
