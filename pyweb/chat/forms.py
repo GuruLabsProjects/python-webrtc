@@ -60,6 +60,7 @@ class MessageCreateForm(ModelForm):
 		model = Message
 		fields = ('text', 'timestamp', 'sender', )
 
+# used soley for testing
 class MessageForm(ModelForm):
 	class Meta:
 		model = Message
@@ -70,7 +71,11 @@ class ConversationCreateForm(ModelForm):
 		model = Conversation
 		fields = ('participants', 'messages', )
 
-class ConversationForm(ModelForm):
-	class Meta:
-		model = Conversation
-		fields = ('id', 'participants', 'messages', )
+	def clean(self):
+		clean_data = super(self.__class__, self).clean()
+		msgs = None
+		if 'messages' in clean_data:
+			msgs = clean_data['messages']
+			if len(msgs) != 0:
+				raise ValidationError("New conversations cant have old messages.")				
+		return clean_data

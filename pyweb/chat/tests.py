@@ -14,7 +14,7 @@ from django.forms.models import model_to_dict
 from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
-from .forms import ProfileForm, UserForm, MessageForm, ConversationForm
+from .forms import ProfileForm, UserForm, MessageForm
 from .views import (UserCreateView, UserAuthenticateView, UserRestView, ProfileRestView,
 	MessageRestView, MessageCreateView, ConversationRestView,
 	ConversationCreateView, API_RESULT, API_SUCCESS, API_FAIL, API_ERROR)
@@ -734,3 +734,98 @@ class ConversationViewTests(TestCase):
 
 		self.assertEquals(count - 1, len(Conversation.objects.all()))
 		self.assertEquals(response.status_code, 200)
+
+class TestFormValidation(TestCase):
+
+	def setUp(self):
+		self.user = User.objects.create_user(username='formtester', password='work')
+		self.user.save()
+		self.data = {}
+		self.jsonData = json.dumps(self.data)
+
+	def testRegisterForm(self):
+		response = self.client.post(reverse('chat:api:user-create'), data=self.jsonData,
+			content_type='application/json')
+		rdata = json.loads(response.content)
+		errors = rdata['error']
+		for key, value in errors.iteritems():
+			self.assertTrue(value[0] == 'This field is required.')
+
+	def testMessageForm(self):
+		login(self.client, user=self.user)
+		convo = Conversation()
+		convo.save()
+		msg = Message(sender=self.user, text='some msg text')
+		msg.save()
+		convo.participants.add(self.user)
+		convo.messages.add(msg)
+		convo.save()
+
+		response = self.client.post(reverse('chat:api:message-create',
+			args=(convo.pk, )), data=self.jsonData,
+		 	content_type='application/json')
+
+		rdata = json.loads(response.content)
+		errors = rdata['error']
+		for key, value in errors.iteritems():
+			self.assertTrue(value[0] == 'This field is required.')
+
+	def testConversationForm(self):
+		login(self.client, user=self.user)
+
+		message = Message(sender=self.user, text='asdf')
+		message.save()
+		conversation = Conversation()
+		conversation.save()
+		conversation.participants.add(self.user)
+		conversation.messages.add(message)
+		conversation.save()
+
+		self.data['messages'] = [message.pk]
+		self.jsonData = json.dumps(self.data)
+
+		response = self.client.post(reverse('chat:api:conversation-create'),
+			data=self.jsonData, content_type='application/json')
+
+
+		rdata = json.loads(response.content)
+		errors = rdata['error']
+		for key, value in errors.iteritems():
+			self.assertTrue(value[0] == 'This field is required.' or \
+				value[0] == 'New conversations cant have old messages.', value[0])
+
+
+	def testProfileForm(self):
+		login(self.client, user=self.user)
+		profile = Profile(user=self.user)
+		profile.save()
+
+		self.data['user'] = self.user.pk
+		self.data['id'] = self.user.pk
+		self.jsonData = json.dumps(self.data, cls=DateTimeAwareEncoder)
+
+		response = self.client.put(reverse('chat:api:profile-rest',
+			args=(self.user.pk, )), data=self.jsonData, content_type='application/json')
+
+
+		rdata = json.loads(response.content)
+		self.assertTrue(response.status_code == 200)
+		# errors = rdata['error']
+		# for key, value in errors.iteritems():
+		# 	self.assertTrue(value[0] != 'This field is required.')
+		#for now, since we don't have any other values on profile, they should all pass
+
+
+	def testUserForm(self):
+		login(self.client, user=self.user)
+
+		response = self.client.put(
+			reverse('chat:api:user-rest',
+			args=(self.user.pk, ) ),
+			data=self.jsonData,
+			content_type='application/json')
+
+		rdata = json.loads(response.content)
+		errors = rdata['error']
+		for key, value in errors.iteritems():
+			self.assertTrue(value[0] == 'This field is required.')
