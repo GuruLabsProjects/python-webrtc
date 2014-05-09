@@ -55,12 +55,6 @@ class UserForm(ModelForm):
 		model = User
 		fields = ('id', 'first_name', 'last_name', 'username', 'email', 'password', )
 
-class MessageCreateForm(ModelForm):
-	class Meta:
-		model = Message
-		fields = ('text', 'timestamp', 'sender', )
-
-# used soley for testing
 class MessageForm(ModelForm):
 	class Meta:
 		model = Message

@@ -27,7 +27,7 @@ from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import UserForm, ProfileForm, MessageForm, \
-	UserCreateForm, MessageCreateForm, ConversationCreateForm
+	UserCreateForm, ConversationCreateForm
 
 logger = logging.getLogger(__name__)
 
