@@ -87,6 +87,11 @@ WebsocketMessenger.Views.ConversationView = WebsocketMessenger.Views.BaseModelVi
 		event.preventDefault();
 		this.sendMessage();
 	},
+
+	updatePlaceholderMessage: function(event) {
+		if (this.$('.message-text').length > 0) this.$('.placeholder').hide();
+		else this.$('.placeholder').show();
+	},
 });
 
 WebsocketMessenger.Views.MessageView = WebsocketMessenger.Views.BaseModelView.extend({

@@ -29,13 +29,19 @@ WebsocketMessenger.Models.ChatModel = WebsocketMessenger.Models.BaseModel.extend
 		// Translate messages and users to their own related collections
 		if (_.has(attributes, 'participants')) {
 			// Create a participant object for each member of conversation
-			_.each(attributes.participants, function(pid){ pcollection.add({ 'id' : pid }); });
+			_.each(attributes.participants, function(participant){
+				pcollection.add(participant);
+				console.log(JSON.stringify(participant));
+			});
 			// Remove participants from the primary set of properties
 			this.unset('participants');
 		}
 		if (_.has(attributes, 'messages')) {
 			// Create a message object for each message in conversation
-			_.each(attributes.messages, function(mid){ mcollection.add({ 'id' : mid, }); });
+			_.each(attributes.messages, function(message){
+				console.log(JSON.stringify(message));
+				mcollection.add(message);
+			});
 			// Remove messages from the primary set of properties
 			this.unset('messages');
 		}
@@ -44,6 +50,15 @@ WebsocketMessenger.Models.ChatModel = WebsocketMessenger.Models.BaseModel.extend
 	createNewMessage: function(mtext) {
 		// Add a new message to the conversation
 		this.related.messages.add({ text : mtext });
-	}
+	}, 
+
+	getConversationMessages: function() {
+		// Retrieve messages in the conversation
+		if (_.isUndefined(this.updateurl)) 
+			throw new Error('Unable to retrieve conversation messages, no update url specified');
+		if (_.isUndefined(this.related.messages.collectionurl))
+			this.related.messages.collectionurl = this.updateurl;
+		this.related.messages.fetch();
+	},
 
 });

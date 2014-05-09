@@ -32,19 +32,8 @@ class DateTimeAwareEncoder(json.JSONEncoder):
 		@example: json.dumps(obj, cls=DateTimeAwareEncoder)
 	'''
 	def default(self, obj):
-		if isinstance(obj, datetime):
-			return {
-				'__type__' : 'datetime',
-				'year' : obj.year,
-				'month' : obj.month,
-				'day' : obj.day,
-				'hour' : obj.hour,
-				'minute' : obj.minute,
-				'second' : obj.second,
-				'microsecond' : obj.microsecond
-			}
-		else:
-			return json.JSONEncoder.default(self, obj)
+		if isinstance(obj, datetime): return obj.strftime('%Y-%m-%dT%H:%M:%S')	
+		return json.JSONEncoder.default(self, obj)
 
 class DateTimeAwareDecoder(json.JSONDecoder):
 	''' Allows for decoding objects with datetime support.

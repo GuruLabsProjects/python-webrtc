@@ -39,6 +39,41 @@ API_RESULT = 'result'
 API_INVALID_DATA = "invalid data: (%s) - errors:(%s)"
 API_BAD_PK = "id %s does not exist (%s)"
 
+
+
+# Helper Methods
+
+def user_data(user):
+	''' Conver user objects to a format easily consumed by Backbone.js
+	'''
+	return {'id' : user.get_username(), 'displayname' : user.get_full_name() }
+
+
+def message_data(cmessage):
+	'''	Convert conversation messages to a format that can be easily
+		consumed by Backbone.js models
+		1. Substitute user names for primary keys
+	'''
+	cmessage_data = model_to_dict(cmessage)
+	if cmessage.sender:
+		cmessage_data['sender'] = user_data(cmessage.sender)
+	return cmessage_data
+
+
+def conversation_data(conversation):
+	'''	Convert conversation messages to a format that can be easily
+		consumed by Backbone.js models
+		1. Substitute user information for primary keys
+		2. Substitute message data for message IDs
+	'''
+	conversation_data = model_to_dict(conversation)
+	conversation_data['participants'] = map(user_data, conversation.participants.all())
+	# conversation_data['messages'] = map(message_data, conversation.messages.all())
+	
+	return conversation_data
+
+
+
 class BaseView(View):
 
 	def getFormErrorResponse(self, form):
@@ -277,7 +312,8 @@ class ConversationCreateView(BaseView):
 		''' Retrieve all active conversations for a user
 		'''
 		active_conversations = Conversation.objects.filter(participants=request.user)
-		return HttpResponse(json.dumps([model_to_dict(conv) for conv in active_conversations]))
+		return HttpResponse(json.dumps([conversation_data(conv) for conv in active_conversations],
+			cls=DateTimeAwareEncoder))
 
 	@method_decorator(login_required)
 	def post(self, request, *args, **kwargs):
@@ -341,7 +377,18 @@ class MessageRestView(BaseView):
 		except KeyError as err:
 			return HttpResponseNotFound(json.dumps(err.message))
 
+
 class MessageCreateView(BaseView):
+
+
+	@method_decorator(login_required)
+	def get(self, request, *args, **kwargs):
+		''' Retrieve all active conversations for a user
+		'''
+		try: conversation = Conversation.objects.get(pk=kwargs.get('cpk'))
+		except Conversation.DoesNotExist: return HttpResponseNotFound()
+		return HttpResponse(json.dumps([message_data(message) 
+			for message in conversation.messages.all()], cls=DateTimeAwareEncoder))
 
 	@method_decorator(login_required)
 	def post(self, request, *args, **kwargs):

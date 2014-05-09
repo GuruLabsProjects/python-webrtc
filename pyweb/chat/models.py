@@ -31,6 +31,9 @@ class Message(models.Model):
 		blank=True, null=True)
 	sender = models.ForeignKey(User, blank=True, null=True)
 
+	class Meta:
+		ordering = ('timestamp', )
+
 	def generateMessageId(self): return uuid.uuid4().hex
 
 	def save(self, *args, **kwargs):

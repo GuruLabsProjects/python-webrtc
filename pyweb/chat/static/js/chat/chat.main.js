@@ -86,12 +86,16 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 				cmodel.updateurl = cmodel.createurl+cmodel.get('id')+'/';
 			});
 		}
+		// Create conversation view
 		var cview = new WebsocketMessenger.Views.ConversationView({
 			model: cmodel,
 			template: this.tmpl_conversation,
 			tmpl_message: this.tmpl_message,
 		});
+		// Add conversation view to the conversation list
 		this.$conversations.append(cview.render().$el);
+		// Retrieve conversation messages
+		cmodel.getConversationMessages();
 	},
 
 	viewConversationJSON: function(event) {
