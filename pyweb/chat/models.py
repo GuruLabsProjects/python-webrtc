@@ -41,7 +41,6 @@ class Message(models.Model):
 		retry_action(messagesave, exception_actions={ IntegrityError : duplicateid })
 
 	def __str__(self):
-		# return ''.join([self.sender.user.username,self.text])
 		return ' : '.join([str(s) for s in (self.sender.username, self.text, self.id) \
 			if s is not None])
 

@@ -143,7 +143,7 @@ class UserViewTests(TestCase):
 		self.assertEqual(userForm.is_valid(), True)
 
 	def testGetError(self):
-		''' tests an attempt to get an invalid user
+		''' tests an attempt to get an invalid user with an invalid primary key value
 		'''
 		login(self.client)
 
@@ -160,6 +160,7 @@ class UserViewTests(TestCase):
 		login(self.client, user=self.user, password='work')
 
 		userDict = model_to_dict(self.user)
+		# lets change the email address
 		userDict['email'] = 'guru@guru.com'
 
 		jsonData = json.dumps(userDict, cls=DateTimeAwareEncoder)
@@ -172,8 +173,11 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
+
+		# make sure the response was a 200 (OK)
 		self.assertEquals(response.status_code, 200)
-		logger.log(2, response.content)
+
+		# make sure the email got updated
 		self.assertEquals(User.objects.get(pk=self.user.pk).email, userDict['email'])
 
 	def testPutError(self):
@@ -197,7 +201,8 @@ class UserViewTests(TestCase):
 		self.assertEquals(response.status_code, 400)
 
 	def testUserAuthenticate(self):
-		''' tests the login method to ensure it's working
+		''' tests the login method to ensure it's working.  Errors are thrown within 
+				login.
 		'''
 		rdata = login(self.client)
 
@@ -222,6 +227,7 @@ class UserViewTests(TestCase):
 
 		rdata = json.loads(response.content)
 
+		# make sure everything got updated that should have
 		self.assertEquals(response.status_code, 200)
 		self.assertEquals(count + 1, len(User.objects.all()))
 		self.assertEquals(countProfiles + 1, len(Profile.objects.all()))
@@ -232,6 +238,7 @@ class UserViewTests(TestCase):
 			self.assertTrue(False, "User doesn't exist when it should...")
 		except Profile.DoesNotExist:
 			self.assertFalse(True, "Profile creation didn't occur")
+
 
 	def testUserRegisterFail(self):
 		''' tests user register failure due to differing password/verify_password values
@@ -250,7 +257,6 @@ class UserViewTests(TestCase):
 		response = self.client.post(reverse('chat:api:user-create'), data=jsonData,
 			content_type='application/json')
 		rdata = json.loads(response.content)
-
 
 		self.assertEquals(response.status_code, 400)
 		self.assertEquals(count, len(User.objects.all()))
@@ -355,6 +361,9 @@ class ProfileViewTests(TestCase):
 		self.view = ProfileRestView()
 
 	def testGetSuccess(self):
+		'''
+			Tests for a successful profile GET request
+		'''
 		login(self.client)
 
 		response = self.client.get(reverse('chat:api:profile-rest',
@@ -368,6 +377,9 @@ class ProfileViewTests(TestCase):
 		self.assertEqual(userForm.is_valid(), True)
 
 	def testGetInvalidInput(self):
+		'''
+			test a profile GET request with invalid primary key
+		'''
 		login(self.client)
 
 		response = self.client.get(reverse('chat:api:profile-rest',
@@ -378,12 +390,20 @@ class ProfileViewTests(TestCase):
 		self.assertEquals(response.status_code, 404)
 
 	def testGetNotLoggedIn(self):
+		'''
+			Test to make sure authentication only data is not accessible unless you're
+				 authorized
+		'''
+
 		# login(self.client)
 		response = self.client.get(reverse('chat:api:profile-rest',
 			args=(invalidPk, )), content_type='application/json')
 		self.assertTrue(response.status_code, 302)
 
 	def testLoggedInGetProfile(self):
+		'''
+			Logged in, get profile test.
+		'''
 		login(self.client)
 
 		response = self.client.get(reverse('chat:api:login-test', args=(self.user.pk, )),
@@ -396,6 +416,10 @@ class ProfileViewTests(TestCase):
 		self.assertEqual(userForm.is_valid(), True)
 
 	def testPutSuccess(self):
+		'''
+			Profile PUT success (although there's not much you can update)
+		'''
+
 		#this test doesnt do anything for now but make sure a valid response is sent back
 		#	right now the profile class can't really be updated with anything...
 		login(self.client, user=self.user, password='work')
@@ -480,12 +504,12 @@ class MessageViewTest(TestCase):
 		self.createView = MessageCreateView()
 
 	def testGetSuccess(self):
+		'''
+			Test successful message get request
+		'''
+
 		login(self.client, user=self.user)
-		# dummyGet = self.factory.get(reverse('chat:api:message-rest',
-		# 	args=(self.conversation.pk, self.msg1.id, )))
 
-
-		# response = self.view.get(dummyGet, pk=self.msg1.id)
 		response = self.client.get(reverse('chat:api:message-rest',
 			args=(self.conversation.pk, self.msg1.id, )), content_type='application/json')
 
@@ -519,6 +543,9 @@ class MessageViewTest(TestCase):
 
 
 	def testGetFail(self):
+		'''
+			trying getting a Message with an invalid id
+		'''
 		login(self.client)
 		response = self.client.get(reverse('chat:api:message-rest',
 			args=(self.conversation.pk, 'bogusmessageid', )),
@@ -529,6 +556,9 @@ class MessageViewTest(TestCase):
 			msg = Message.objects.get(pk='bogusmessageid')
 
 	def testDeleteSuccess(self):
+		'''
+			test successful deletion of Message
+		'''
 		login(self.client, user=self.user, password='work')
 
 		self.assertEquals(len(Message.objects.all()), 2)
@@ -543,6 +573,10 @@ class MessageViewTest(TestCase):
 			Message.objects.get(pk=rdata['id'])
 
 	def testDeleteFailure(self):
+		'''
+			test succesful deletion of a Message			
+		'''
+
 		login(self.client, user=self.user, password='work')
 		self.assertEquals(len(Message.objects.all()), 2)
 
@@ -557,6 +591,9 @@ class MessageViewTest(TestCase):
 		self.assertEquals(len(Message.objects.all()), 2)
 
 	def testPut(self):
+		'''
+			Test that PUT Message requests always return 400	
+		'''
 		#this should always fail
 		user = User.objects.create_user(username='bogusGuru', password='work')
 		user.save()
@@ -574,6 +611,10 @@ class MessageViewTest(TestCase):
 		self.assertEquals(response.status_code, 400)
 
 	def testPostSuccess(self):
+		'''
+			Test a successful Message creation
+		'''
+
 		login(self.client, user=self.user, password='work')
 
 		msg = Message(sender=self.user, text='new message')
@@ -599,6 +640,10 @@ class MessageViewTest(TestCase):
 		self.assertTrue(Message.objects.get(pk=rdata['id']).text == msg.text)
 
 	def testPostFailure(self):
+		'''
+			test unsuccessful Message creation - id already taken
+		'''
+
 		login(self.client, user=self.user, password='work')
 
 		msg = Message(sender=self.user, text='new message')
@@ -647,6 +692,13 @@ class ConversationViewTests(TestCase):
 		self.createView = ConversationCreateView()
 
 	def testGetSuccess(self):
+		'''
+			test successful conversation GET request.  The server should return a special
+				dictionary formated as follows.
+
+				[{"id" : "alphanumericrandomid", "text" : "message text..."}, {...}, ...]
+		'''
+
 		login(self.client, user=self.user, password='work')
 
 		self.conversation.participants.add(self.user)
@@ -671,6 +723,9 @@ class ConversationViewTests(TestCase):
 			self.assertFalse(foundIt, "%s not found in %s" % (msg, str(dbmsgs)))
 
 	def testPostSuccess(self):
+		'''
+			test successful Conversation creation
+		'''
 		login(self.client)
 
 		convo = Conversation()
@@ -690,6 +745,9 @@ class ConversationViewTests(TestCase):
 			self.assertTrue(false, "error with message post")
 
 	def testPut(self):
+		'''
+			Test that conversation PUT (update) requests fail
+		'''
 		login(self.client)
 		#this should always fail
 		convo = Conversation()
@@ -744,6 +802,9 @@ class TestFormValidation(TestCase):
 		self.jsonData = json.dumps(self.data)
 
 	def testRegisterForm(self):
+		'''
+			Test that UserCreationForm is working properly
+		'''
 		response = self.client.post(reverse('chat:api:user-create'), data=self.jsonData,
 			content_type='application/json')
 		rdata = json.loads(response.content)
@@ -752,6 +813,9 @@ class TestFormValidation(TestCase):
 			self.assertTrue(value[0] == 'This field is required.')
 
 	def testMessageForm(self):
+		'''
+			Test that MessageForm is working properly
+		'''
 		login(self.client, user=self.user)
 		convo = Conversation()
 		convo.save()
@@ -771,6 +835,10 @@ class TestFormValidation(TestCase):
 			self.assertTrue(value[0] == 'This field is required.')
 
 	def testConversationForm(self):
+		'''
+			Test that ConversationForm is working properly.
+		'''
+
 		login(self.client, user=self.user)
 
 		message = Message(sender=self.user, text='asdf')
@@ -796,6 +864,10 @@ class TestFormValidation(TestCase):
 
 
 	def testProfileForm(self):
+		'''
+			Test that ProfileForm is working properly.
+		'''
+
 		login(self.client, user=self.user)
 		profile = Profile(user=self.user)
 		profile.save()
@@ -810,13 +882,12 @@ class TestFormValidation(TestCase):
 
 		rdata = json.loads(response.content)
 		self.assertTrue(response.status_code == 200)
-		# errors = rdata['error']
-		# for key, value in errors.iteritems():
-		# 	self.assertTrue(value[0] != 'This field is required.')
-		#for now, since we don't have any other values on profile, they should all pass
 
 
 	def testUserForm(self):
+		'''
+			Test that User PUT / update requests are working properly.
+		'''
 		login(self.client, user=self.user)
 
 		response = self.client.put(

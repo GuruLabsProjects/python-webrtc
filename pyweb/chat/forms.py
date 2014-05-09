@@ -13,7 +13,8 @@ class ProfileForm(ModelForm):
 class UserCreateForm(UserCreationForm):
 	'''	Form used to create new user accounts.
 	'''
-	
+	#Meta class which defines the model that we're working with, and the fields we
+	#	care about validating.
 	class Meta:
 		model = User
 		fields = ('first_name', 'last_name', 'username', 'email', 'password1', 'password2')
@@ -43,33 +44,40 @@ class UserCreateForm(UserCreationForm):
 			field = self.fields.get(fname)
 			if hasattr(field, 'required'): setattr(field, 'required', True)
 
-	def clean(self):
-		cleaned_data = super(self.__class__, self).clean()
-		# if cleaned_data.get('password1') != cleaned_data.get('verify_password'):
-		#	raise ValidationError("The supplied passwords don't match")
-		return cleaned_data
-
 
 class UserForm(ModelForm):
+	''' Form for validating User update requests.
+	'''
 	class Meta:
 		model = User
 		fields = ('id', 'first_name', 'last_name', 'username', 'email', 'password', )
 
 class MessageForm(ModelForm):
+	''' Form for validating Messages
+	'''
 	class Meta:
 		model = Message
 		fields = ('id', 'text', 'timestamp', 'sender', )
 
 class ConversationCreateForm(ModelForm):
+	''' Form for validation the creation of conversation objects
+	'''
 	class Meta:
 		model = Conversation
 		fields = ('participants', 'messages', )
 
 	def clean(self):
+		''' we want to make sure people don't attempt to get unauthorized access to messages.
+		 		So we make sure the conversation getting sent to us has no messages already
+			 	in it.  Conversations are created once as an empty conversation.
+		'''
+
+		# get the data from the parent clean method
 		clean_data = super(self.__class__, self).clean()
 		msgs = None
 		if 'messages' in clean_data:
 			msgs = clean_data['messages']
+			# ensure there are no messages
 			if len(msgs) != 0:
 				raise ValidationError("New conversations cant have old messages.")				
 		return clean_data
