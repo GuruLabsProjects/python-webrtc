@@ -5,6 +5,20 @@ from twisted.internet import threads
 from twisted.python import log
 from twisted.protocols.basic import LineReceiver
 from twisted.internet.protocol import ServerFactory
+from twisted.internet import protocol
+
+class EchoProtocol(protocol.Protocol):
+	def dataReceived(self, data):
+		print "recieved data: ", data
+		self.transport.write(data)
+
+class EchoConnectionFactory(ServerFactory):
+	protocol = EchoProtocol
+
+	def buildProtocol(self, addr):
+		'''	Return a new instance of a protocol connection
+		'''
+		return self.protocol(self)
 
 
 class MessengerConnection(LineReceiver):
