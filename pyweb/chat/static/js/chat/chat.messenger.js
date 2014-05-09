@@ -21,6 +21,7 @@ WebsocketMessenger.MessengerConnection = Backbone.View.extend({
 		this.server = options.server;
 		this.port = options.port;
 	},
+
 	connect: function() {
 		this.connection = new WebSocket('ws://'+this.server+':'+this.port+'/messages/');
 		this.connection.onerror = this.socketError.bind(this);
@@ -28,17 +29,15 @@ WebsocketMessenger.MessengerConnection = Backbone.View.extend({
 		this.connection.onmessage = this.socketConnectionMessage.bind(this);
 		this.connection.onclose = this.socketConnectionClose.bind(this);
 	},
-	socketError: function(event) {
-		console.log(error);
-	},
-	socketConnectionOpen: function(event) {
-		console.log('Connected to web socket server');
-	},
-	socketConnectionMessage: function(event) {
-		console.log('Message received from socket server', event.data);
+	socketError: function(error) { this.trigger('server:error', error); },
+	socketConnectionOpen: function(event) { this.trigger('server:open'); },
+	socketConnectionMessage: function(event) { 
 		this.trigger('server:message', event.data);
 	},
-	socketConnectionClose: function(event) {
-		console.log('Connection to socket server terminated');
+	socketConnectionClose: function(event) { this.trigger('websocket:closed'); },
+	sendSocketData: function(mdata) {
+		if (_.isUndefined(this.connection))
+			throw new Error('Unable to send message, no web socket connection');
+		this.connection.send(mdata);
 	},
 });

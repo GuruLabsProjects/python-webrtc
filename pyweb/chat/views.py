@@ -267,7 +267,17 @@ class ConversationRestView(BaseView):
 		except KeyError as err:
 			return HttpResponseNotFound(json.dumps(err.message))
 
+
 class ConversationCreateView(BaseView):
+	'''	View used to create conversations and to retrieve all active conversations for a user
+	'''
+
+	@method_decorator(login_required)
+	def get(self, request, *args, **kwargs):
+		''' Retrieve all active conversations for a user
+		'''
+		active_conversations = Conversation.objects.filter(participants=request.user)
+		return HttpResponse(json.dumps([model_to_dict(conv) for conv in active_conversations]))
 
 	@method_decorator(login_required)
 	def post(self, request, *args, **kwargs):
@@ -288,6 +298,7 @@ class ConversationCreateView(BaseView):
 			return HttpResponseNotFound(json.dumps(err.message))
 		except TypeError as err:
 			return HttpResponseNotFound(json.dumps(err.message))
+
 
 class MessageRestView(BaseView):
 
@@ -342,8 +353,12 @@ class MessageCreateView(BaseView):
 			if not msgForm.is_valid():
 				return self.getFormErrorResponse(msgForm)
 
+			# Validate that the request user has permission to add messages to the conversation
 			elif request.user in conversation.participants.all():
 				obj = msgForm.save()
+				# Add the request user as the sender
+				obj.sender = request.user
+				obj.save()
 				conversation.messages.add(obj)
 				conversation.save()
 				response = self.getSuccessResponse(id=obj.pk)
@@ -368,7 +383,11 @@ def application_index(request):
 		'chat.active-user.html' if request.user.is_authenticated() else 'chat.create-account.html', {
 			'title' : 'Guru Labs Chat Demo Application',
 			'message_server' : getattr(settings, 'MESSAGE_SERVER', '127.0.0.1'),
-			'message_port' : getattr(settings, 'MESSAGE_PORT', '1789')
+			'message_port' : getattr(settings, 'MESSAGE_PORT', '1789'),
+			'username' : request.user.get_username(),
+			'displayname' : request.user.get_full_name(),
+		} if request.user.is_authenticated() else {
+			'title' : 'Welcome to Connections!',
 		}, context_instance=RequestContext(request))
 
 

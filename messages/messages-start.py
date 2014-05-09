@@ -1,5 +1,4 @@
-#!/usr/bin/python
-import sys, os
+#!/usr/bin/python import sys, os
 from configobj import ConfigObj
 
 from twisted.internet import reactor

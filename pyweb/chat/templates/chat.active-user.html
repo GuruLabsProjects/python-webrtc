@@ -8,19 +8,20 @@
 <div class="medium-8 columns"><h2>Connections</h2></div>
 <div class="medium-4 columns">
 <ul class="button-group right">
-<li><a id="btn-create-conversation" class="button small" href="#">Create New Conversation</a></li>
-<li><a class="button small secondary" href="{% url 'chat:logout' %}">Logout</a></li>
+	<li><a id="btn-view-conversations" class="button small" href="#">View Conversations</a></li>
+	<li><a class="button small secondary" href="{% url 'chat:logout' %}">Logout</a></li>
 </ul>
-</div></div>
+</div>
+</div>
 </section>
 {% endblock %}
 
 {% block content %}
 <section class="row">
-	<div id="chat-user-list" class="small-4 columns">
+	<div id="chat-user-list" class="small-4 columns user-list">
 		<h3>Active Users</h3>
 	</div>
-	<div id="conversation-user-list" class="small-8 columns">
+	<div id="chat-conversation-list" class="small-8 columns conversation-list">
 		<h3>Conversations</h3>
 	</div>
 </section>
@@ -32,11 +33,16 @@
 <!-- Guru Labs API URLs -->
 <api conversation-create="{% url 'chat:api:conversation-create' %}" 
 	mserver="{{ message_server }}" mport="{{ message_port }}"></api>
+<userdata {% if username %}username="{{ username }}"{% endif %}
+	{% if displayname %} displayname="{{ displayname }}"{% endif %}></userdata>
 <!-- Message View JavaScript Templates -->
 {% include 'js-templates/chat.html' %}
+{% include 'js-templates/chat.active.html' %}
 <!-- Page Assets -->
 <script src="{{ STATIC_URL }}js/chat/base.models.js"></script>
 <script src="{{ STATIC_URL }}js/chat/base.views.js"></script>
 <script src="{{ STATIC_URL }}js/chat/chat.messenger.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.models.js"></script>
+<script src="{{ STATIC_URL }}js/chat/chat.views.js"></script>
 <script src="{{ STATIC_URL }}js/chat/chat.main.js"></script>
 {% endblock %}

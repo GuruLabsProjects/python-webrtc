@@ -1,0 +1,27 @@
+<script type="text/html" id="template-conversation">
+<article class="row conversation-container panel">
+<div class="small-12-columns">
+<div class="row conversation-header">
+	<div class="large-10 columns conversation-participants"></div>
+	<div class="large-2 columns conversation-controls">
+		<a href="#" class="remove-conversation">Remove</a>
+	</div>
+</div></div><hr/>
+<div class="row"><div class="large-12 columns conversation-messages">
+	<p class="placeholder">No messages yet, be the first to send one. Use the box below.</p>
+</div></div><hr/>
+<div class="row collapse conversation-controls">
+	<div class="small-10 columns">
+		<input type="text" class="conversation-message-input" 
+			placeholder="Message text ..." />
+	</div>
+	<div class="small-2 columns">
+		<a class="button small btn-send-message postfix" href="#">Send</a>
+	</div>
+</div>
+</div>
+</article>
+</script>
+<script type="text/html" id="template-message">
+<p class="message-text"><%- text %></p>
+</script>

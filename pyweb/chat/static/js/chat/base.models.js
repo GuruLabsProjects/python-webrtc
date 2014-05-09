@@ -77,6 +77,8 @@ WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 		_.each(options.related, function(rcollection, rname){
 			bmodel.addRelatedCollection(rname, rcollection);
 		});
+		// Model events
+		bmodel.listenTo(bmodel, 'sync', bmodel.serverResponse.bind(bmodel));
 	},
 
 	addCollection: function(group_name, cname, collection) {
@@ -93,17 +95,19 @@ WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 		if (!_.isObject(this[group_name])) throw new Error('addCollection(): ' + group_name 
 			+ 'is not a JavaScript object')
 		this[group_name][cname] = collection;
-		this.listenTo(collection, 'add', function(model){
+		this.listenTo(collection, 'add', function(rmodel){
 			bmodel.trigger('related:model:add', rmodel);
 			bmodel.trigger('related:collection:'+cname+':model:add', rmodel);
+			bmodel.trigger('related:collection:'+cname+':change');
 			bmodel.trigger('change');
 			bmodel.trigger('change:related');
 		});
 		this.listenTo(collection, 'remove', function(rmodel) {
 			bmodel.trigger('related:model:remove', rmodel);
 			bmodel.trigger('related:collection:'+cname+':model:remove', rmodel);
+			bmodel.trigger('related:collection:'+cname+':change');
 			bmodel.trigger('change');
-			bmodel.trggier('change:related');
+			bmodel.trigger('change:related');
 		});
 	},
 
@@ -134,7 +138,14 @@ WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 			return(this.createurl);
 		}
 		return(this.updateurl);
-	}
+	},
+
+	serverResponse: function(model, response, options) {
+		// Process a successful server sync
+		// Retrieves the model ID, update URL, and other important information
+		if (_.has(response, 'id')) model.set('id', response.id);
+		if (_.has(response, 'href-update')) model.updateurl = reponse['href-update'];
+	},
 
 });
 
@@ -145,7 +156,18 @@ WebsocketMessenger.Collections.BaseModelCollection = Backbone.Collection.extend(
 	//		When added to the model's related object, the modelname is frequently
 	//		used as the key. The modelname can be passed as a parameter in the options
 
+	collectionurl: undefined,
+
 	modelname: undefined,
 	model: WebsocketMessenger.Models.BaseModel,
-	initialize: function(initmodels, options) { this.modelname = options.modelname; },
+	initialize: function(initmodels, options) {
+		options = options || {};
+		_.defaults(options, { model : this.model });
+		this.model = options.model;
+		this.modelname = options.modelname;
+		this.collectionurl = options.collectionurl;
+	},
+	url: function() { 
+		return(this.collectionurl);
+	},
 });

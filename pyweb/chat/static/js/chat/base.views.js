@@ -33,7 +33,7 @@ WebsocketMessenger.display_form_errors = function(fview, ferrors, etemplate) {
 	ferrors = ferrors || {};
 	if (!_.isFunction(etemplate)) throw new Error('The error template must be a function');
 	_.each(ferrors, function(elist, fname){
-		_.each(elist, function(emessage){
+		_.each(elist, function(emessage) {
 			var etext = etemplate({ msg : emessage });
 			fview.$el.find('[name='+fname+']').after(etext);
 		});

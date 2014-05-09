@@ -27,8 +27,9 @@ class Message(models.Model):
 	'''
 	id = models.CharField(primary_key=True, max_length=36, unique=True)
 	text = models.CharField(max_length=256)
-	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='Date Sent')
-	sender = models.ForeignKey(User)
+	timestamp = models.DateTimeField(default=datetime.datetime.now, verbose_name='Date Sent', 
+		blank=True, null=True)
+	sender = models.ForeignKey(User, blank=True, null=True)
 
 	def generateMessageId(self): return uuid.uuid4().hex
 
@@ -52,6 +53,8 @@ class Conversation(models.Model):
 	id = models.CharField(primary_key=True, max_length=36)
 	participants = models.ManyToManyField(User, blank=True)
 	messages = models.ManyToManyField(Message, blank=True)
+	ctime = models.DateTimeField(default=datetime.datetime.utcnow, 
+		verbose_name='Date Created', editable=False)
 
 	def __str__(self):
 		return ' : '.join(["Conversation", str(self.pk)])

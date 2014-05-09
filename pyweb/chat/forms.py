@@ -62,9 +62,10 @@ class MessageCreateForm(ModelForm):
 
 # used soley for testing
 class MessageForm(ModelForm):
+	
 	class Meta:
 		model = Message
-		fields = ('id', 'text', 'timestamp', 'sender', )
+		fields = ('text', )
 
 class ConversationCreateForm(ModelForm):
 	class Meta:
