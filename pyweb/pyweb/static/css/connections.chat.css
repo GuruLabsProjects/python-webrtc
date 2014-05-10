@@ -1,5 +1,7 @@
 .centered { text-align: center; }
 
+.hidden { display: none; }
+
 .create-connections {
 	background-image: url('../img/highres/chat-citywide.jpg');
 	background-size: cover;

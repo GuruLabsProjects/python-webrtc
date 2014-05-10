@@ -56,8 +56,10 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 
 		// Websocket messenger and events
 		this.messenger = options.messenger;
+		this.listenTo(this.messenger, 'server:open', this.hideReconnectButton.bind(this));
 		this.listenTo(this.messenger, 'server:message', this.socketServerMessage.bind(this));
 		this.listenTo(this.messenger, 'websocket:closed', this.clearUserList.bind(this));
+		this.listenTo(this.messenger, 'websocket:closed', this.showReconnectButton.bind(this));
 
 		// Conversation Manager
 		this.conversations = new WebsocketMessenger.Collections.BaseModelCollection({}, {
@@ -79,12 +81,12 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		// View events
 		this.listenTo(this, 'socket:userlist', this.activeUserList.bind(this));
 
-		// Connect to web socket server
-		this.messenger.connect();
+		this.websocketConnect();
 	},
 
 	events: {
 		'click #btn-view-conversations' : 'viewConversationJSON',
+		'click #btn-reconnect' : 'websocketConnect',
 	},
 
 	createConversation: function() {
@@ -122,10 +124,11 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 	},
 
 	socketServerMessage: function(serverdata) {
+		console.log(serverdata);
 		var sdata = JSON.parse(serverdata);
 		// Create the active user list (from the server)
 		if (sdata.opcode == 'user-activelist') {
-			if (_.has(sdata, 'users')) this.trigger('socket:userlist', sdata.users);
+			if (_.has(sdata, 'users'))  this.trigger('socket:userlist', sdata.users);
 		}
 	},
 
@@ -139,16 +142,24 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 			model: auser,
 			template: this.tmpl_activeuser,
 		});
-		this.$users.append(aview.render().$el.html());
+		this.$users.append(aview.render().$el);
 	},
 
 	clearUserList: function() {
 		// Clear the active user list
-		console.log('Clear the user list');
-		this.active_users.forEach(function(umodel){
-			umodel.trigger('destroy'); 
-		});
+		this.active_users.forEach(function(umodel){ umodel.trigger('destroy'); });
+		this.active_users.reset();
 	},
+
+	hideReconnectButton: function() {
+		this.$('#btn-reconnect').addClass('hidden');
+	},
+
+	showReconnectButton: function() {
+		this.$('#btn-reconnect').removeClass('hidden');
+	},
+
+	websocketConnect: function() { this.messenger.connect(); },
 
 });
 
