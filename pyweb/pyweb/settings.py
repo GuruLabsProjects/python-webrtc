@@ -55,6 +55,7 @@ ROOT_URLCONF = 'pyweb.urls'
 
 WSGI_APPLICATION = 'pyweb.wsgi.application'
 
+CONTROL_SCHEME = 'http'
 MESSAGE_SERVER = '127.0.0.1'
 MESSAGE_PORT = '1789'
 

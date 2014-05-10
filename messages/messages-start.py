@@ -27,4 +27,7 @@ if __name__ == '__main__':
 	websocket_messages = MessengerConnectionFactory(root_site=siteroot)
 	siteroot.putChild('messages', WebSocketsResource(websocket_messages))
 
+	# Add control interface
+	siteroot.putChild('control', WebSocketControl(siteroot, websocket_messages))
+
 	reactor.run()

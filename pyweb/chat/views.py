@@ -1,4 +1,8 @@
-import uuid, json, logging, datetime, traceback
+import logging, traceback
+import datetime
+import uuid
+import json
+import urlparse, requests
 
 from django.conf import settings
 from django.shortcuts import render, render_to_response
@@ -92,6 +96,16 @@ class BaseView(View):
 	def invalidRequest(self):
 		return HttpResponseBadRequest()
 
+	def pushData(self, pdata):
+		'''	Push data to a remote server
+		'''
+		control_url = urlparse.urlunparse((
+			getattr(settings, 'CONTROL_SCHEME', 'http'), 
+			':'.join([str(s) for s in (getattr(settings, 'MESSAGE_SERVER', 'localhost'), 
+				getattr(settings, 'MESSAGE_PORT', '1789')) if s is not None]),
+			'control', '', '', ''))
+		print control_url
+
 	def get(self, request, *args, **kwargs):
 		return self.invalidRequest()
 
@@ -107,6 +121,7 @@ class BaseView(View):
 class UserRestView(BaseView):
 	''' RestView for User class
 	'''
+
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
 		# do we want to limit this so only the user logged in can get the details?
@@ -336,6 +351,10 @@ class ConversationCreateView(BaseView):
 					return HttpResponseBadRequest(json.dumps(response))
 			
 			response = self.getSuccessResponse(id=conversation.id)
+
+			# Push data to client
+			try: self.pushData({ 'opcode' : 'tst-op' })
+			except: print traceback.print_exc()
 
 			return HttpResponse(json.dumps(response))
 
