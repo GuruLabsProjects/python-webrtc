@@ -33,6 +33,8 @@ from .models import Profile, Message, Conversation
 from .forms import UserForm, ProfileForm, MessageForm, \
 	UserCreateForm, ConversationCreateForm
 
+from .errors import OperationError
+
 logger = logging.getLogger(__name__)
 
 API_SUCCESS = 'success'
@@ -110,7 +112,7 @@ class BaseView(View):
 			':'.join([str(s) for s in (getattr(settings, 'MESSAGE_SERVER', 'localhost'), 
 				getattr(settings, 'MESSAGE_PORT', '1789')) if s is not None]),
 			'control', '', '', ''))
-		r = requests.post(control_url, data=json.dumps(rdata))
+		r = requests.post(control_url, data=json.dumps(rdata, cls=DateTimeAwareEncoder))
 
 	def get(self, request, *args, **kwargs):
 		return self.invalidRequest()
@@ -359,8 +361,16 @@ class ConversationRestView(BaseView):
 			convoObj = Conversation.objects.get(pk=kwargs['pk'])
 			# make sure user is in the conversation
 			if request.user in convoObj.participants.all():
+
+				# Push change to connected clients
+				try: self.pushData('conversation-delete',
+					map(lambda user: user.get_username(), convoObj.participants.all()),
+					{'id' : convoObj.pk })
+				except Exception as err: logger.critical(str(err))
+
 				convoObj.delete()
 				response = self.getSuccessResponse(id=kwargs['pk'])
+
 				return HttpResponse(json.dumps(response))
 			else:
 				return HttpResponseNotFound()
@@ -413,7 +423,7 @@ class ConversationCreateView(BaseView):
 			try: self.pushData('conversation-create',
 				map(lambda user: user.get_username(), conversation.participants.all()),
 				conversation_data(conversation))
-			except: print traceback.print_exc()
+			except Exception as err: logger.critical(str(err))
 
 			return HttpResponse(json.dumps(response))
 
@@ -461,6 +471,13 @@ class MessageRestView(BaseView):
 				msg = convo.messages.get(pk=kwargs['pk'])
 
 				if(msg.sender == request.user):
+
+					# Push change to users
+					try: self.pushData('conversation-delete',
+						map(lambda user: user.get_username(), convo.participants.all()),
+						{ 'cid' : convo.pk, 'id' : msg.pk })
+					except Exception as err: logger.critical(str(err))
+
 					msg.delete()
 					response = self.getSuccessResponse(id=kwargs['pk'])
 					return HttpResponse(json.dumps(response))
@@ -507,10 +524,20 @@ class MessageCreateView(BaseView):
 				conversation.messages.add(obj)
 				conversation.save()
 				response = self.getSuccessResponse(id=obj.pk)
+				
+				# Push data to client
+				try: self.pushData('message-create',
+					map(lambda user: user.get_username(), conversation.participants.all()),
+					message_data(obj))
+				except Exception as err:
+					print traceback.print_exc()
+					logger.critical(str(err))
+				
 				return HttpResponse(json.dumps(response))
 
 			else:
 				return HttpResponseNotFound()
+		
 		except Message.DoesNotExist as err:
 			return HttpResponseNotFound(json.dumps(err.message))
 		except TypeError as err:
