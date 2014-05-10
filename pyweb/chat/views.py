@@ -528,7 +528,7 @@ class MessageCreateView(BaseView):
 				# Push data to client
 				try: self.pushData('message-create',
 					map(lambda user: user.get_username(), conversation.participants.all()),
-					message_data(obj))
+					{'cid' : conversation.pk, 'message' : message_data(obj)})
 				except Exception as err:
 					print traceback.print_exc()
 					logger.critical(str(err))

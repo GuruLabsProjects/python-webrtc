@@ -109,7 +109,7 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 			if (!_.isUndefined(cmodel.id))
 				cmodel.updateurl = cmodel.createurl+cmodel.get('id')+'/';
 			// Track ID changes, update URL appropriately
-			cmodel.listenTo(cmodel, 'chage:id', function(){
+			cmodel.listenTo(cmodel, 'change:id', function(){
 				cmodel.updateurl = cmodel.createurl+cmodel.get('id')+'/';
 			});
 		}
@@ -124,7 +124,7 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		// Retrieve conversation messages
 		if (cmodel.isNew()) {
 			cmodel.once('change:id', function(){
-				cmodel.updateurl = cmodel.createurl+cmodel.get('id')+'/';
+				// cmodel.updateurl = cmodel.createurl+cmodel.get('id')+'/';
 				cmodel.getConversationMessages();
 			});
 			cmodel.save();
@@ -132,11 +132,45 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 	},
 
 	socketServerMessage: function(serverdata) {
-		console.log(serverdata);
 		var sdata = JSON.parse(serverdata);
-		// Create the active user list (from the server)
-		if (sdata.opcode == 'user-activelist') {
-			if (_.has(sdata, 'users'))  this.trigger('socket:userlist', sdata.users);
+		switch (sdata.opcode) {
+			// Generate the active user list
+			case 'user-activelist':
+				if (_.has(sdata, 'users')) {
+					this.trigger('socket:userlist', sdata.users)
+				}
+				break;
+			// Create a new conversation
+			case 'conversation-create':
+				if (_.has(sdata, 'message')) {
+					if (_.has(sdata.message, 'id')) {
+						if (_.isUndefined(this.conversations.get(sdata.message.id))) {
+							this.conversations.add(sdata.message);
+						}
+					}
+				}
+				break;
+			// Remove a conversation
+			case 'conversation-delete':
+				if (_.has(sdata, 'message')) {
+					if (_.has(sdata.message, 'id')) {
+						var cmodel = this.conversations.get(sdata.message.id);
+						if (_.isObject(cmodel)) cmodel.trigger('destroy');
+					}
+				}
+				break;
+			case 'message-create':
+				if (_.has(sdata, 'message')) {
+					if (_.has(sdata.message, 'cid')) {
+						if (_.isObject(this.conversations.get(sdata.message.cid))) {
+							var cmodel = this.conversations.get(sdata.message.cid);
+							if (_.has(sdata.message, 'message')) {
+								cmodel.related.messages.add(sdata.message.message);
+							}
+						}
+					}
+				}
+				break;
 		}
 	},
 
