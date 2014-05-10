@@ -112,3 +112,22 @@ WebsocketMessenger.Views.MessageView = WebsocketMessenger.Views.BaseModelView.ex
 	},
 
 });
+
+
+WebsocketMessenger.Views.UserView = WebsocketMessenger.Views.BaseModelView.extend({
+
+	template: undefined,
+	initialize: function(options) {
+		options = options || {};
+		this.template = options.template;
+		this.listenTo(this.model, 'destroy', this.removeView.bind(this));
+	},
+
+	render: function() {
+		// Render the view templates
+		if (!_.isFunction(this.template))
+			throw new Error('No template function provided to the view');
+		this.$el.html(this.template(this.model.toJSON()));
+		return this;
+	},
+});

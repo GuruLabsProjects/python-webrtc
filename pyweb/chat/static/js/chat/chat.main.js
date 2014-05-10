@@ -10,6 +10,9 @@ var WebsocketMessenger = WebsocketMessenger || {
 WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend({
 	// 	Backbone.js view used to manage the front page of the application
 
+	// @signal 'socket:userlist': Triggered when a list of active users is received
+	//		from the socket server
+
 	url_create_conversation: undefined,
 
 	$modalcontent: undefined,
@@ -22,6 +25,7 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 	tmpl_formerrors: undefined,
 	tmpl_conversation: undefined,
 	tmpl_messages: undefined,
+	tmpl_activeuser: undefined,
 
 	messenger: undefined,
 
@@ -39,6 +43,7 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		this.tmpl_formerrors = options.tmpl_formerrors;
 		this.tmpl_conversation = options.tmpl_conversation;
 		this.tmpl_message = options.tmpl_message;
+		this.tmpl_activeuser = options.tmpl_activeuser;
 
 		// UI References
 		this.$conversations = options.conversations_el;
@@ -49,9 +54,10 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		if (_.isUndefined(this.$users))
 			throw new Error('Please provide a valid user root element');
 
-		// Websocket messenger
+		// Websocket messenger and events
 		this.messenger = options.messenger;
-		this.messenger.connect();
+		this.listenTo(this.messenger, 'server:message', this.socketServerMessage.bind(this));
+		this.listenTo(this.messenger, 'websocket:closed', this.clearUserList.bind(this));
 
 		// Conversation Manager
 		this.conversations = new WebsocketMessenger.Collections.BaseModelCollection({}, {
@@ -63,6 +69,18 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		this.listenTo(this.conversations, 'add', this.initConversation.bind(this));
 		// Retrieve conversations for the user
 		this.conversations.fetch();
+
+		// Active users
+		this.active_users = new WebsocketMessenger.Collections.BaseModelCollection({}, {
+			modelname: 'user-active',		// Model name
+		});
+		this.listenTo(this.active_users, 'add', this.initActiveUser.bind(this));
+
+		// View events
+		this.listenTo(this, 'socket:userlist', this.activeUserList.bind(this));
+
+		// Connect to web socket server
+		this.messenger.connect();
 	},
 
 	events: {
@@ -103,8 +121,34 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		console.log(JSON.stringify(this.conversations.toJSON()));
 	},
 
+	socketServerMessage: function(serverdata) {
+		var sdata = JSON.parse(serverdata);
+		// Create the active user list (from the server)
+		if (sdata.opcode == 'user-activelist') {
+			if (_.has(sdata, 'users')) this.trigger('socket:userlist', sdata.users);
+		}
+	},
 
+	activeUserList: function(userlist) {
+		var mview = this;
+		_.each(userlist, function(udata) { mview.active_users.add(udata); });
+	},
 
+	initActiveUser: function(auser) {
+		var aview = new WebsocketMessenger.Views.UserView({
+			model: auser,
+			template: this.tmpl_activeuser,
+		});
+		this.$users.append(aview.render().$el.html());
+	},
+
+	clearUserList: function() {
+		// Clear the active user list
+		console.log('Clear the user list');
+		this.active_users.forEach(function(umodel){
+			umodel.trigger('destroy'); 
+		});
+	},
 
 });
 
@@ -115,25 +159,50 @@ $(document).ready(function() {
 
 	// UI References
 	var $apiref = $('api');
+	var $userdata = $('userdata');
 	var $modalref = $('#modal-content');
 	var $userlist = $('#chat-user-list');
 	var $conversationlist = $('#chat-conversation-list');
+
+
+		// Logged in user
+	var cuser = new WebsocketMessenger.Models.BaseModel({
+		id: $userdata.attr('username'),
+		displayname: $userdata.attr('displayname') || '',
+	});
 
 	// Compile templates
 	var tmpl_notification = _.template($('#template-notification').html());
 	var tmpl_formerror = _.template($('#template-formerror').html());
 	var tmpl_conversation = _.template($('#template-conversation').html());
 	var tmpl_message = _.template($('#template-message').html());
+	var tmpl_activeuser = _.template($('#template-activeuser').html());
 
 	// Create connection to websocket server
 	var wsmessenger = new WebsocketMessenger.MessengerConnection({
 		server: $apiref.attr('mserver'),
 		port: $apiref.attr('mport'),
+		user: cuser,
 	});
 
-	wsmessenger.listenTo(wsmessenger, 'server:message', function(mdata) {
-		console.log('Server Message:' + mdata);
+	// Messenger events
+	
+	// Server connection opens
+	wsmessenger.listenTo(wsmessenger, 'server:open', function(){
+		wsmessenger.sendSocketData(JSON.stringify({
+			'opcode' : 'user-identity',
+			'user-identify' : cuser.toJSON() 
+		}));
+		wsmessenger.sendSocketData(JSON.stringify({
+			'opcode' : 'user-active',
+		}));
 	});
+
+	// Server message received
+	wsmessenger.listenTo(wsmessenger, 'server:message', function(mdata) {
+		console.log('Websocket Server Message:', mdata);
+	});
+
 
 	// Create the page view
 	var cmanager = new WebsocketMessenger.Views.ChatManager({
@@ -143,6 +212,7 @@ $(document).ready(function() {
 		tmpl_formerrors: tmpl_formerror,	// Microtemplate for form errors
 		tmpl_conversation: tmpl_conversation, // Microtemplate for rendering conversations
 		tmpl_message: tmpl_message, // Microtemplate for rendering messages
+		tmpl_activeuser: tmpl_activeuser, // Microtemplate for rendering active user details
 		
 		modalcontent: $modalref,	// Modal content UI reference
 		users_el: $userlist,		// User list UI reference
