@@ -72,7 +72,6 @@ def conversation_data(conversation):
 	'''
 	conversation_data = model_to_dict(conversation)
 	conversation_data['participants'] = map(user_data, conversation.participants.all())
-	# conversation_data['messages'] = map(message_data, conversation.messages.all())
 	
 	return conversation_data
 
@@ -100,15 +99,18 @@ class BaseView(View):
 	def invalidRequest(self):
 		return HttpResponseBadRequest()
 
-	def pushData(self, pdata):
+	def pushData(self, opcode, recipients=[], pdata={}):
 		'''	Push data to a remote server
 		'''
+		rdata = { 'opcode' : opcode, 'recipients' : recipients }
+		rdata['message'] = pdata
+
 		control_url = urlparse.urlunparse((
 			getattr(settings, 'CONTROL_SCHEME', 'http'), 
 			':'.join([str(s) for s in (getattr(settings, 'MESSAGE_SERVER', 'localhost'), 
 				getattr(settings, 'MESSAGE_PORT', '1789')) if s is not None]),
 			'control', '', '', ''))
-		print control_url
+		r = requests.post(control_url, data=json.dumps(rdata))
 
 	def get(self, request, *args, **kwargs):
 		return self.invalidRequest()
@@ -126,7 +128,7 @@ class UserRestView(BaseView):
 	''' UserRestView enables GET, PUT, and DELETE requests for User objects.  It follows
 			tipical CRUD implementation.
 	'''
-	
+
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
 		'''
@@ -408,7 +410,9 @@ class ConversationCreateView(BaseView):
 			response = self.getSuccessResponse(id=conversation.id)
 
 			# Push data to client
-			try: self.pushData({ 'opcode' : 'tst-op' })
+			try: self.pushData('conversation-create',
+				map(lambda user: user.get_username(), conversation.participants.all()),
+				conversation_data(conversation))
 			except: print traceback.print_exc()
 
 			return HttpResponse(json.dumps(response))
