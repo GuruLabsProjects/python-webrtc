@@ -31,7 +31,7 @@ from .helpers import DateTimeAwareEncoder, DateTimeAwareDecoder
 
 from .models import Profile, Message, Conversation
 from .forms import UserForm, ProfileForm, MessageForm, \
-	UserCreateForm, MessageCreateForm, ConversationCreateForm
+	UserCreateForm, ConversationCreateForm
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,10 @@ def conversation_data(conversation):
 
 
 class BaseView(View):
+	'''
+		BaseView that has helper methods and all REST points returning
+			HttpResponseBadRequest.  Override the REST end points you want to use.
+	'''
 
 	def getFormErrorResponse(self, form):
 		response = {}
@@ -119,11 +123,15 @@ class BaseView(View):
 		return self.invalidRequest()		
 
 class UserRestView(BaseView):
-	''' RestView for User class
+	''' UserRestView enables GET, PUT, and DELETE requests for User objects.  It follows
+			tipical CRUD implementation.
 	'''
-
+	
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
+		'''
+			Returns a User object as JSON
+		'''
 		# do we want to limit this so only the user logged in can get the details?
 		try:
 			obj = User.objects.get(pk=kwargs['pk'])
@@ -135,6 +143,10 @@ class UserRestView(BaseView):
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
+		'''
+			Takes a user Put request, updates the User object accordingly and returns the 
+				id of the update User in a dictionary.
+		'''
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 			# ensure the requesting user is logged in and requesting the right user obj
@@ -143,6 +155,7 @@ class UserRestView(BaseView):
 				user = User.objects.get(pk=kwargs['pk'])
 				userForm = UserForm(rdata, instance=user)
 
+				# Form validate
 				if userForm.is_valid():
 					userForm.save()
 					response = self.getSuccessResponse(id=userForm.data['id'])
@@ -154,24 +167,29 @@ class UserRestView(BaseView):
 			return HttpResponseBadRequest()
 
 		except User.DoesNotExist as err:
+			# user doesnt exists in database... can't update
 			return HttpResponseNotFound(json.dumps(err.message))
 		except TypeError as err:
+			# the supplied request.body wasn't serializable
 			return HttpResponseNotFound(json.dumps(err.message))
 		except KeyError as err:
+			# no 'pk' key in kwargs
 			return HttpResponseNotFound(json.dumps(err.message))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
+		'''
+			Deletes a User object based off the pk sent in the request.
+		'''
 		response = {}
 		try:		
-			# ensure the requesting user is logged in and requesting the right user obj
+			# ensure the requesting user is logged in and requesting to delete him/herself
 			if str(request.user.pk) == str(kwargs['pk']):	
 				user = User.objects.get(pk=kwargs['pk'])
 				user.delete()
 				response = self.getSuccessResponse(id=kwargs['pk'])
 				return HttpResponse(json.dumps(response))
 
-			# response[API_ERROR] = "%s vs %s" % (request.user.pk, kwargs['pk'], )
 			return HttpResponseBadRequest()
 
 		except User.DoesNotExist as err:
@@ -181,19 +199,26 @@ class UserRestView(BaseView):
 class UserAuthenticateView(BaseView):
 
 	def post(self, request, *args, **kwargs):
+		'''
+			User authentication view.  Returns 200 on success.
+		'''
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 
 			response = {}
 			authForm = AuthenticationForm(data=rdata)
 
+			# ensure form validates
 			if authForm.is_valid():
 
+				# authenticate the user based off supplied data
 				user = authenticate(username=authForm.cleaned_data['username'],
 					password=authForm.cleaned_data['password'])
-
+				# user = None if authentication failed, else it's the user object.
 				if user:
+					# ensure the user is_active is True
 					if user.is_active:
+						# log the user in
 						login(request, user)
 						response = self.getSuccessResponse()
 						return HttpResponse(json.dumps(response))
@@ -217,13 +242,20 @@ class UserAuthenticateView(BaseView):
 class UserCreateView(BaseView):
 
 	def post(self, request, *args, **kwargs):
+		'''
+			User Registration view.  Returns the id of the user in JSON format.
+				example
+					{ "id" : 12345 }
+		'''
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 			response = {}
 			userForm = UserCreateForm(rdata)
 
+			# ensure data is valid
 			if userForm.is_valid():
 				user = userForm.save()
+				# create a Profile object to go with the User
 				profile = Profile(user=user)
 				profile.save()
 				response = self.getSuccessResponse(id=user.pk)
@@ -239,6 +271,9 @@ class ProfileRestView(BaseView):
 
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
+		'''
+			Gets the Profile object (in JSON) based off of the User's pk
+		'''
 		try:
 			profile = Profile.objects.get(user=kwargs['pk'])
 			return HttpResponse(json.dumps(model_to_dict(profile),
@@ -251,6 +286,9 @@ class ProfileRestView(BaseView):
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
+		'''
+			Update the profile object.
+		'''
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 			response = {}
@@ -279,6 +317,15 @@ class ConversationRestView(BaseView):
 
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
+		'''
+			Get Message's in the conversation specified by pk.  Response is formatted as 
+				follows:
+						[
+							{'id' : 'alphanumericid', 'text' : 'Heres message text!'},
+							{...},
+							...
+						]
+		'''
 		try:			
 			obj = Conversation.objects.get(pk=kwargs['pk'])
 
@@ -293,7 +340,7 @@ class ConversationRestView(BaseView):
 				return HttpResponse(json.dumps(response, cls=DateTimeAwareEncoder),
 					content_type='application/json')
 			else:
-				return HttpResponseNotFound("")
+				return HttpResponseNotFound()
 
 		except Conversation.DoesNotExist as err:
 			return HttpResponseNotFound(json.dumps(err.message))
@@ -302,9 +349,13 @@ class ConversationRestView(BaseView):
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
+		'''
+			Delete the specified Conversation
+		'''
 		response = {}
 		try:
 			convoObj = Conversation.objects.get(pk=kwargs['pk'])
+			# make sure user is in the conversation
 			if request.user in convoObj.participants.all():
 				convoObj.delete()
 				response = self.getSuccessResponse(id=kwargs['pk'])
@@ -332,6 +383,10 @@ class ConversationCreateView(BaseView):
 
 	@method_decorator(login_required)
 	def post(self, request, *args, **kwargs):
+		'''
+			Conversation Create view.  If successful, return the id/pk of the
+				conversation.
+		'''
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 			response = {}
@@ -368,6 +423,10 @@ class MessageRestView(BaseView):
 
 	@method_decorator(login_required)
 	def get(self, request, *args, **kwargs):
+		'''
+			Get a message based off of the conversation primary key and the message
+				primary key supplied.
+		'''
 		try:
 			convo = Conversation.objects.get(pk=kwargs['cpk'])
 
@@ -387,6 +446,9 @@ class MessageRestView(BaseView):
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
+		'''
+			Delete a message from the Conversation.   Id of Message that was deleted.
+		'''
 		response = {}
 		try:
 			convo = Conversation.objects.get(pk=kwargs['cpk'])
@@ -420,6 +482,10 @@ class MessageCreateView(BaseView):
 
 	@method_decorator(login_required)
 	def post(self, request, *args, **kwargs):
+		'''
+			Create Message View.  When the Message has been validated and added to the 
+				database, make sure you add the Message to the conversation it belongs to.
+		'''
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 			response = {}
@@ -455,7 +521,8 @@ def application_index(request):
 		Otherwise the "create user" page is provided.
 	'''
 	return render_to_response(
-		'chat.active-user.html' if request.user.is_authenticated() else 'chat.create-account.html', {
+		'chat.active-user.html' if request.user.is_authenticated() else \
+			'chat.create-account.html', {
 			'title' : 'Guru Labs Chat Demo Application',
 			'message_server' : getattr(settings, 'MESSAGE_SERVER', '127.0.0.1'),
 			'message_port' : getattr(settings, 'MESSAGE_PORT', '1789'),
