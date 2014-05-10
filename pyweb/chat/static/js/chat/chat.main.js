@@ -13,6 +13,8 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 	// @signal 'socket:userlist': Triggered when a list of active users is received
 	//		from the socket server
 
+	user: undefined,
+
 	url_create_conversation: undefined,
 
 	$modalcontent: undefined,
@@ -37,6 +39,8 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		// Set view options
 		this.url_create_conversation = options.url_create_conversation;
 		this.$modalcontent = options.modalcontent;
+
+		this.user = options.user;
 
 		// View HTML microtemplates
 		this.tmpl_notification = options.tmpl_notification;
@@ -89,9 +93,12 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		'click #btn-reconnect' : 'websocketConnect',
 	},
 
-	createConversation: function() {
+	createConversation: function(umodel) {
 		// Create a new conversation
-		console.log('Create a new conversation');
+		var cmodel = new WebsocketMessenger.Models.ChatModel({});
+		cmodel.related.participants.add(umodel);
+		if (!_.isUndefined(this.user))  cmodel.related.participants.add(this.user);
+		this.conversations.add(cmodel);
 	},
 
 	initConversation: function(cmodel) {
@@ -115,12 +122,13 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 		// Add conversation view to the conversation list
 		this.$conversations.append(cview.render().$el);
 		// Retrieve conversation messages
-		cmodel.getConversationMessages();
-	},
-
-	viewConversationJSON: function(event) {
-		event.preventDefault();
-		console.log(JSON.stringify(this.conversations.toJSON()));
+		if (cmodel.isNew()) {
+			cmodel.once('change:id', function(){
+				cmodel.updateurl = cmodel.createurl+cmodel.get('id')+'/';
+				cmodel.getConversationMessages();
+			});
+			cmodel.save();
+		} else { cmodel.getConversationMessages() }
 	},
 
 	socketServerMessage: function(serverdata) {
@@ -143,6 +151,7 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 			template: this.tmpl_activeuser,
 		});
 		this.$users.append(aview.render().$el);
+		this.listenTo(aview, 'conversation:create', this.createConversation.bind(this));
 	},
 
 	clearUserList: function() {
@@ -218,6 +227,7 @@ $(document).ready(function() {
 	// Create the page view
 	var cmanager = new WebsocketMessenger.Views.ChatManager({
 		el: $('body'),			// View element. Created with existing element.
+		user: cuser,			// User currently active on the page
 
 		tmpl_notification: tmpl_notification,	// Microtemplate for user notifications
 		tmpl_formerrors: tmpl_formerror,	// Microtemplate for form errors

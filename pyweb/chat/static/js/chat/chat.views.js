@@ -131,5 +131,12 @@ WebsocketMessenger.Views.UserView = WebsocketMessenger.Views.BaseModelView.exten
 		return this;
 	},
 
-	createConnection: function() { this.trigger('conversation:create') },
+	events: {
+		'click .create-conversation' : 'createConnection',
+	},
+
+	createConnection: function(event) {
+		event.preventDefault();
+		this.trigger('conversation:create', this.model); 
+	},
 });

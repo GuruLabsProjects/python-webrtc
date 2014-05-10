@@ -320,15 +320,24 @@ class ConversationCreateView(BaseView):
 		try:
 			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
 			response = {}
-			convoForm = ConversationCreateForm(rdata)
+			
+			# Create conversation
+			conversation = Conversation()
+			conversation.save()
+			
+			# Add users
+			for ruid in rdata.get('participants', []):
+				try:
+					cuser = User.objects.get(username=ruid)
+					conversation.participants.add(cuser)
+				except User.DoesNotExist:
+					conversation.delete()
+					response['error'] = 'Conversations user does not exst'
+					return HttpResponseBadRequest(json.dumps(response))
+			
+			response = self.getSuccessResponse(id=conversation.id)
 
-			if convoForm.is_valid():
-				convo = convoForm.save()
-				response = self.getSuccessResponse(id=convo.pk)
-				return HttpResponse(json.dumps(response))
-
-			else:
-				return self.getFormErrorResponse(convoForm)
+			return HttpResponse(json.dumps(response))
 
 		except Conversation.DoesNotExist as err:
 			return HttpResponseNotFound(json.dumps(err.message))

@@ -9,6 +9,7 @@ from websockets import WebSocketsResource
 from twisted.python import log
 
 from messagerelay.messageserver import MessengerConnectionFactory
+from messagerelay.messagecontrol import WebSocketControl
 
 log.startLogging(sys.stdout)
 
