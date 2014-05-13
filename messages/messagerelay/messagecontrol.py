@@ -29,12 +29,12 @@ class WebSocketControl(Resource):
 					socket_connections = self.websockets.connections.get(recipient, [])
 					for connection in socket_connections:
 						try: connection.sendLine(json.dumps(mdata))
-						except: print traceback.print_exc()
+						except: log.msg(traceback.format_exc())
 						log.msg('Forwarding message data to user (%s)' % recipient)
 			response['status'] = 'success'
 		except Exception as err:
 			response['status'] = 'fail'
-			response['error'] = unicode(err)
+			response['error'] = str(err)
 			response['details'] = traceback.format_exc()
 		
 

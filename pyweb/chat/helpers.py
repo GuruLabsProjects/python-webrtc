@@ -40,15 +40,16 @@ class DateTimeAwareDecoder(json.JSONDecoder):
 		@example:  json.loads(data, cls=DateTimeAwareDecoder)
 	'''
 	def __init__(self, *args, **kwargs):
-		json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
+		super(self.__class__, self).__init__(*args, **kwargs)
+		# json.JSONDecoder.__init__(self, object_hook=self.dict_to_object)
 
-	def dict_to_object(self, d):
-		if '__type__' not in d:
-			return d
+	# def dict_to_object(self, d):
+	#	if '__type__' not in d:
+	#		return d
 
-		type = d.pop('__type__')
-		if type == 'datetime':
-			return datetime(**d)
-		else:
-			d['__type__'] = type
-			return d
+	#	type = d.pop('__type__')
+	#	if type == 'datetime':
+	#		return datetime(**d)
+	#	else:
+	#		d['__type__'] = type
+	#		return d

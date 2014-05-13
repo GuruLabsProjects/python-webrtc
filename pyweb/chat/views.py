@@ -2,7 +2,10 @@ import logging, traceback
 import datetime
 import uuid
 import json
-import urlparse, requests
+try: import urlparse
+except ImportError as exc:
+	import urllib.parse as urlparse
+import requests
 
 from django.conf import settings
 from django.shortcuts import render, render_to_response
@@ -73,7 +76,7 @@ def conversation_data(conversation):
 		2. Substitute message data for message IDs
 	'''
 	conversation_data = model_to_dict(conversation)
-	conversation_data['participants'] = map(user_data, conversation.participants.all())
+	conversation_data['participants'] = list(map(user_data, conversation.participants.all()))
 	
 	return conversation_data
 
@@ -94,8 +97,7 @@ class BaseView(View):
 	def getSuccessResponse(self, **kwargs):
 		response = {}
 		response[API_RESULT] = API_SUCCESS
-		for key, value in kwargs.iteritems():
-			response[str(key)] = value
+		for key, value in kwargs.items(): response[str(key)] = value
 		return response
 
 	def invalidRequest(self):
@@ -143,7 +145,7 @@ class UserRestView(BaseView):
 				content_type='application/json')
 
 		except User.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
@@ -152,7 +154,7 @@ class UserRestView(BaseView):
 				id of the update User in a dictionary.
 		'''
 		try:
-			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+			rdata = json.loads(request.body)
 			# ensure the requesting user is logged in and requesting the right user obj
 			if str(request.user.pk) == str(kwargs['pk']):
 
@@ -172,13 +174,13 @@ class UserRestView(BaseView):
 
 		except User.DoesNotExist as err:
 			# user doesnt exists in database... can't update
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except TypeError as err:
 			# the supplied request.body wasn't serializable
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
 			# no 'pk' key in kwargs
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
@@ -197,7 +199,7 @@ class UserRestView(BaseView):
 			return HttpResponseBadRequest()
 
 		except User.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 
 class UserAuthenticateView(BaseView):
@@ -207,7 +209,8 @@ class UserAuthenticateView(BaseView):
 			User authentication view.  Returns 200 on success.
 		'''
 		try:
-			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+			print(str(request.body))
+			rdata = json.loads(str(request.body, encoding='UTF-8'))
 
 			response = {}
 			authForm = AuthenticationForm(data=rdata)
@@ -225,7 +228,7 @@ class UserAuthenticateView(BaseView):
 						# log the user in
 						login(request, user)
 						response = self.getSuccessResponse()
-						return HttpResponse(json.dumps(response))
+						return HttpResponse(json.dumps(str(response)))
 					else:
 						raise self.ValidationError("User account %s is disabled" % \
 						username)
@@ -235,12 +238,12 @@ class UserAuthenticateView(BaseView):
 				return self.getFormErrorResponse(authForm)
 
 		except User.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
-		except ValidationError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
-		except TypeError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+		# except ValidationError as err:
+		#	return HttpResponseNotFound(json.dumps(str(err)))
+		# except TypeError as err:
+		#	return HttpResponseNotFound(json.dumps(str(err)))
 
 
 class UserCreateView(BaseView):
@@ -252,7 +255,7 @@ class UserCreateView(BaseView):
 					{ "id" : 12345 }
 		'''
 		try:
-			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+			rdata = json.loads(request.body)
 			response = {}
 			userForm = UserCreateForm(rdata)
 
@@ -268,7 +271,7 @@ class UserCreateView(BaseView):
 			else: 
 				return self.getFormErrorResponse(userForm)
 		except TypeError as err:
-			return HttpResponseNotFound(json.dumps(err.message))		
+			return HttpResponseNotFound(json.dumps(str(err)))		
 
 
 class ProfileRestView(BaseView):
@@ -284,9 +287,9 @@ class ProfileRestView(BaseView):
 				cls=DateTimeAwareEncoder), content_type='application/json')
 
 		except Profile.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 	@method_decorator(login_required)
 	def put(self, request, *args, **kwargs):
@@ -294,7 +297,7 @@ class ProfileRestView(BaseView):
 			Update the profile object.
 		'''
 		try:
-			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+			rdata = json.loads(request.body)
 			response = {}
 			profile = Profile.objects.get(pk=rdata['id'])
 			profileForm = ProfileForm(rdata, instance=profile)
@@ -311,11 +314,11 @@ class ProfileRestView(BaseView):
 					return self.getFormErrorResponse(profileForm)
 			return HttpResponseNotFound()
 		except Profile.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except TypeError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 class ConversationRestView(BaseView):
 
@@ -347,9 +350,9 @@ class ConversationRestView(BaseView):
 				return HttpResponseNotFound()
 
 		except Conversation.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
@@ -364,7 +367,7 @@ class ConversationRestView(BaseView):
 
 				# Push change to connected clients
 				try: self.pushData('conversation-delete',
-					map(lambda user: user.get_username(), convoObj.participants.all()),
+					list(map(lambda user: user.get_username(), convoObj.participants.all())),
 					{'id' : convoObj.pk })
 				except Exception as err: logger.critical(str(err))
 
@@ -376,9 +379,9 @@ class ConversationRestView(BaseView):
 				return HttpResponseNotFound()
 
 		except Conversation.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 
 class ConversationCreateView(BaseView):
@@ -395,12 +398,12 @@ class ConversationCreateView(BaseView):
 
 	@method_decorator(login_required)
 	def post(self, request, *args, **kwargs):
-		'''
-			Conversation Create view.  If successful, return the id/pk of the
-				conversation.
+		''' Conversation Create view.  If successful, return the id/pk of the
+			conversation. Also return client id (cid), if cid was part of the
+			original request.
 		'''
 		try:
-			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+			rdata = json.loads(request.body)
 			response = {}
 			
 			# Create conversation
@@ -418,19 +421,23 @@ class ConversationCreateView(BaseView):
 					return HttpResponseBadRequest(json.dumps(response))
 			
 			response = self.getSuccessResponse(id=conversation.id)
+			if rdata.get('cid'): response['cid'] = rdata.get('cid')
 
 			# Push data to client
-			try: self.pushData('conversation-create',
-				map(lambda user: user.get_username(), conversation.participants.all()),
-				conversation_data(conversation))
+			try:
+				pdata = conversation_data(conversation)
+				if rdata.get('cid'): pdata['cid'] = rdata.get('cid')
+				self.pushData('conversation-create',
+					list(map(lambda user: user.get_username(), conversation.participants.all())),
+					pdata)
 			except Exception as err: logger.critical(str(err))
 
 			return HttpResponse(json.dumps(response))
 
 		except Conversation.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except TypeError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 
 class MessageRestView(BaseView):
@@ -456,7 +463,7 @@ class MessageRestView(BaseView):
 			# the message is not in a conversation that they're requesting it for
 			return HttpResponseNotFound() 
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 	@method_decorator(login_required)
 	def delete(self, request, *args, **kwargs):
@@ -473,9 +480,10 @@ class MessageRestView(BaseView):
 				if(msg.sender == request.user):
 
 					# Push change to users
-					try: self.pushData('conversation-delete',
-						map(lambda user: user.get_username(), convo.participants.all()),
-						{ 'cid' : convo.pk, 'id' : msg.pk })
+					try:
+						self.pushData('conversation-delete',
+							list(map(lambda user: user.get_username(), convo.participants.all())),
+							{ 'cnid' : convo.pk, 'id' : msg.pk })
 					except Exception as err: logger.critical(str(err))
 
 					msg.delete()
@@ -484,9 +492,9 @@ class MessageRestView(BaseView):
 
 			return HttpResponseNotFound()
 		except Message.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 
 class MessageCreateView(BaseView):
@@ -508,7 +516,7 @@ class MessageCreateView(BaseView):
 				database, make sure you add the Message to the conversation it belongs to.
 		'''
 		try:
-			rdata = json.loads(request.body, cls=DateTimeAwareDecoder)
+			rdata = json.loads(request.body)
 			response = {}
 			msgForm = MessageForm(rdata)
 			conversation = Conversation.objects.get(pk=kwargs['cpk'])
@@ -526,11 +534,13 @@ class MessageCreateView(BaseView):
 				response = self.getSuccessResponse(id=obj.pk)
 				
 				# Push data to client
-				try: self.pushData('message-create',
-					map(lambda user: user.get_username(), conversation.participants.all()),
-					{'cid' : conversation.pk, 'message' : message_data(obj)})
+				try:
+					pdata = { 'cnid' : conversation.pk, 'message' : message_data(obj)}
+					if rdata.get('cid'): pdata['cid'] = rdata.get('cid')
+					self.pushData('message-create',
+						list(map(lambda user: user.get_username(), conversation.participants.all())),
+						pdata)
 				except Exception as err:
-					print traceback.print_exc()
 					logger.critical(str(err))
 				
 				return HttpResponse(json.dumps(response))
@@ -539,11 +549,11 @@ class MessageCreateView(BaseView):
 				return HttpResponseNotFound()
 		
 		except Message.DoesNotExist as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except TypeError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 		except KeyError as err:
-			return HttpResponseNotFound(json.dumps(err.message))
+			return HttpResponseNotFound(json.dumps(str(err)))
 
 
 def application_index(request):

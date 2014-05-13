@@ -9,7 +9,7 @@ from twisted.internet import protocol
 
 class EchoProtocol(protocol.Protocol):
 	def dataReceived(self, data):
-		print "recieved data: ", data
+		log.msg("Received data: %s" % data)
 		self.transport.write(data)
 
 class EchoConnectionFactory(ServerFactory):

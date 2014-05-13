@@ -122,7 +122,8 @@ if DEBUG:
 		},
 		'loggers' : {
 			'django.request' : {
-				'handlers' : False,
+				'handlers' : ['console',],
+				'propagate': False,
 				'level' : 'DEBUG',
 			},
 		},

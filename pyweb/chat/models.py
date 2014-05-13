@@ -14,7 +14,7 @@ class Profile(models.Model):
 	''' User profile class for service users. Provides supplementary data, avatar
 		settings, etc.
 	'''
- 	user = models.OneToOneField(User, blank=False)
+	user = models.OneToOneField(User, blank=False)
 
 	def __str__(self):
 		return self.user.username		

@@ -122,7 +122,11 @@ WebsocketMessenger.Models.BaseModel = Backbone.Model.extend({
 
 	toJSON: function(options) {
 		options = options || {};
+		// Retrieve model base properties
 		var mjson = Backbone.Model.prototype.toJSON.apply(this, [options,]);
+		// Add Backbone.js cid to new models
+		if (this.isNew()) mjson.cid = this.cid;
+		// Add ID objects from related models
 		_.each(this.related, function(rcollection, rname){
 			mjson[rname] = _.pluck(rcollection.filter(function(model){
 				return model.get('id') !== undefined;
