@@ -2,3 +2,4 @@ django
 twisted
 configobj
 requests
+six

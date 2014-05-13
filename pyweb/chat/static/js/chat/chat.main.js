@@ -140,16 +140,18 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 					this.trigger('socket:userlist', sdata.users)
 				}
 				break;
+			
 			// Create a new conversation
 			case 'conversation-create':
 				if (_.has(sdata, 'message')) {
-					if (_.has(sdata.message, 'id')) {
-						if (_.isUndefined(this.conversations.get(sdata.message.id))) {
-							this.conversations.add(sdata.message);
-						}
+					// Check for existing message by ID and cID
+					if ( (_.isUndefined(this.conversations.get(sdata.message.id))) & 
+						(_.isUndefined(this.conversations.get(sdata.message.cid))) ) {
+						this.conversations.add(sdata.message);
 					}
 				}
 				break;
+			
 			// Remove a conversation
 			case 'conversation-delete':
 				if (_.has(sdata, 'message')) {
@@ -159,13 +161,18 @@ WebsocketMessenger.Views.ChatManager = WebsocketMessenger.Views.BaseView.extend(
 					}
 				}
 				break;
+			
+			// Create a new message
 			case 'message-create':
 				if (_.has(sdata, 'message')) {
-					if (_.has(sdata.message, 'cid')) {
-						if (_.isObject(this.conversations.get(sdata.message.cid))) {
-							var cmodel = this.conversations.get(sdata.message.cid);
+					if (_.has(sdata.message, 'cnid')) {
+						if (_.isObject(this.conversations.get(sdata.message.cnid))) {
+							var cmodel = this.conversations.get(sdata.message.cnid);
 							if (_.has(sdata.message, 'message')) {
-								cmodel.related.messages.add(sdata.message.message);
+								if ( (_.isUndefined(cmodel.related.messages.get(sdata.message.message.id))) &
+									(_.isUndefined(cmodel.related.messages.get(sdata.message.message.cid))) ) {
+									cmodel.related.messages.add(sdata.message.message);
+								}
 							}
 						}
 					}

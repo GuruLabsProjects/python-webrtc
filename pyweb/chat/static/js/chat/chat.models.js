@@ -31,17 +31,13 @@ WebsocketMessenger.Models.ChatModel = WebsocketMessenger.Models.BaseModel.extend
 			// Create a participant object for each member of conversation
 			_.each(attributes.participants, function(participant){
 				pcollection.add(participant);
-				console.log(JSON.stringify(participant));
 			});
 			// Remove participants from the primary set of properties
 			this.unset('participants');
 		}
 		if (_.has(attributes, 'messages')) {
 			// Create a message object for each message in conversation
-			_.each(attributes.messages, function(message){
-				console.log(JSON.stringify(message));
-				mcollection.add(message);
-			});
+			_.each(attributes.messages, function(message){ mcollection.add(message); });
 			// Remove messages from the primary set of properties
 			this.unset('messages');
 		}

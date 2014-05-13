@@ -2,6 +2,7 @@ import logging, traceback
 import datetime
 import uuid
 import json
+import six
 try: import urlparse
 except ImportError as exc:
 	import urllib.parse as urlparse
@@ -210,7 +211,7 @@ class UserAuthenticateView(BaseView):
 		'''
 		try:
 			print(str(request.body))
-			rdata = json.loads(str(request.body, encoding='UTF-8'))
+			rdata = json.loads(six.u(request.body))
 
 			response = {}
 			authForm = AuthenticationForm(data=rdata)
@@ -535,12 +536,14 @@ class MessageCreateView(BaseView):
 				
 				# Push data to client
 				try:
-					pdata = { 'cnid' : conversation.pk, 'message' : message_data(obj)}
-					if rdata.get('cid'): pdata['cid'] = rdata.get('cid')
+					pmdata = message_data(obj)
+					if rdata.get('cid'): pmdata['cid'] = rdata.get('cid')
+					pdata = { 'cnid' : conversation.pk, 'message' : pmdata }
 					self.pushData('message-create',
 						list(map(lambda user: user.get_username(), conversation.participants.all())),
 						pdata)
 				except Exception as err:
+					print traceback.print_exc()
 					logger.critical(str(err))
 				
 				return HttpResponse(json.dumps(response))
